@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/user.controller");
+const { firebaseAuth } = require('../middleware/auth.middleware');
 
 // ✅ User CRUD
 router.post("/register", userController.addUser);         // Create user
