@@ -30,6 +30,7 @@ build/
 *.sqlite3
 db/*.sqlite
 db/*.sqlite3
+config/config.js
 
 # ────── Node Modules ──────────────────────
 node_modules/
@@ -56,4 +57,5 @@ coverage/
 /.yarn-integrity
 /.pnp.*
 
-
+# ────── Firebase Service Account ──────────
+config/firebase-service-account.json
