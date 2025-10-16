@@ -221,22 +221,35 @@ const getindividualUserId = async (req, res) => {
     const userId = req.query.userId || req.params.userId;
     if (!userId) return ReE(res, "userId is required", 400);
 
-    // Find the user
-    const user = await model.User.findOne({
-      where: { id: userId },
-      attributes: ["id", "firstName", "lastName", "email", "mobileNumber"],
-      raw: true,
-    });
+    // Try fetching user safely
+    let user;
+    try {
+      user = await model.User.findOne({
+        where: { id: userId },
+        attributes: ["id", "firstName", "lastName", "email", "mobileNumber"],
+        raw: true,
+      });
+    } catch (err) {
+      // Fallback: if mobileNumber column doesn’t exist, fetch remaining fields
+      console.warn("⚠️ mobileNumber column missing in User table, skipping it...");
+      user = await model.User.findOne({
+        where: { id: userId },
+        attributes: ["id", "firstName", "lastName", "email"],
+        raw: true,
+      });
+    }
 
     if (!user) return ReE(res, "User not found", 404);
 
-    // Combine firstName + lastName
     const userName = `${user.firstName} ${user.lastName}`.trim();
 
-    // Find all ASheet rows where sourcedBy matches user's name
+    // Fetch ASheet records for that user (case-insensitive match)
     const aSheetData = await model.ASheet.findAll({
       where: {
-        sourcedBy: { [Op.iLike]: userName } // case-insensitive match
+        [Op.or]: [
+          { sourcedBy: { [Op.iLike]: userName } },
+          { userId: user.id }
+        ]
       },
       order: [["dateOfConnect", "ASC"]],
       raw: true,
@@ -277,3 +290,4 @@ const getindividualUserId = async (req, res) => {
 };
 
 module.exports.getindividualUserId = getindividualUserId;
+
