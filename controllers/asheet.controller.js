@@ -40,6 +40,21 @@ const createASheet = async (req, res) => {
         userId: userId,
       };
 
+      // Duplicate check: only mobileNumber or email
+      const whereClause = {};
+      if (payload.mobileNumber) whereClause.mobileNumber = payload.mobileNumber;
+      if (payload.email) whereClause.email = payload.email;
+
+      let existing = null;
+      if (Object.keys(whereClause).length) {
+        existing = await model.ASheet.findOne({ where: whereClause });
+      }
+
+      if (existing) {
+        // Skip duplicates
+        continue;
+      }
+
       // Insert into DB
       const record = await model.ASheet.create(payload);
       insertedRecords.push(record);
@@ -53,6 +68,7 @@ const createASheet = async (req, res) => {
 };
 
 module.exports.createASheet = createASheet;
+
 
 // Update ASheet fields
 const updateASheetFields = async (req, res) => {
