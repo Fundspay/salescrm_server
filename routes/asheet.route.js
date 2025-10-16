@@ -8,5 +8,6 @@ router.put("/update/:id", asheetController.updateASheetFields);
 router.get("/list", asheetController.getASheets);
 router.get("/list/:id", asheetController.getASheetById);
 router.delete("/asheet/:id", asheetController.deleteASheet);
+router.get("/individual/:userId", asheetController.getindividualUserId);
 
 module.exports = router;
