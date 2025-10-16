@@ -69,7 +69,6 @@ const createASheet = async (req, res) => {
 
 module.exports.createASheet = createASheet;
 
-
 // Update ASheet fields
 const updateASheetFields = async (req, res) => {
   try {
@@ -226,6 +225,27 @@ const getindividualUserId = async (req, res) => {
       },
       order: [["dateOfConnect", "ASC"]],
       raw: true,
+      attributes: [
+        "id",
+        "sr",
+        "sourcedFrom",
+        "sourcedBy",
+        "dateOfConnect",
+        "businessName",
+        "contactPersonName",
+        "mobileNumber",
+        "address",
+        "email",
+        "businessSector",
+        "zone",
+        "landmark",
+        "existingWebsite",
+        "smmPresence",
+        "meetingStatus",
+        "userId",
+        "createdAt",
+        "updatedAt",
+      ],
     });
 
     return ReS(res, {
