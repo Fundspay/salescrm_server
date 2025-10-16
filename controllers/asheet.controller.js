@@ -320,10 +320,18 @@ const fetchFollowUpTarget = async (req, res) => {
     // 🔹 Count total Follow Up
     const totalFollowUp = followUpRows.length;
 
+    // 🔹 Fetch all registered users
+    const users = await model.User.findAll({
+      where: { isDeleted: false }, // only active users
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
+    });
+
     return ReS(res, {
       success: true,
       data: followUpRows,
       totalFollowUp,
+      users, // added list of users
     }, 200);
 
   } catch (error) {
@@ -333,6 +341,7 @@ const fetchFollowUpTarget = async (req, res) => {
 };
 
 module.exports.fetchFollowUpTarget = fetchFollowUpTarget;
+
 
 
 
