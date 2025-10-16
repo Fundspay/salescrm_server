@@ -69,39 +69,54 @@ const createASheet = async (req, res) => {
 
 module.exports.createASheet = createASheet;
 
-// Update ASheet fields
 const updateASheetFields = async (req, res) => {
   try {
     const record = await model.ASheet.findByPk(req.params.id);
     if (!record) return ReE(res, "ASheet record not found", 404);
 
-    // Determine userId (if updating userId)
-    if (req.body.userId !== undefined) {
-      const userExists = await model.User.findByPk(req.body.userId);
-      if (!userExists) return ReE(res, `User with id ${req.body.userId} does not exist`, 400);
+    const { userId, ...updateData } = req.body;
+
+    // 🔹 Validate userId if provided
+    if (userId !== undefined) {
+      const userExists = await model.User.findByPk(userId);
+      if (!userExists) return ReE(res, `User with id ${userId} does not exist`, 400);
+      updateData.userId = userId;
     }
 
-    // Prepare payload with all fields from body, store nulls as null
-    const payload = {
-      sr: req.body.sr ?? null,
-      sourcedFrom: req.body.sourcedFrom ?? null,
-      sourcedBy: req.body.sourcedBy ?? null,
-      dateOfConnect: req.body.dateOfConnect ?? null,
-      businessName: req.body.businessName ?? null,
-      contactPersonName: req.body.contactPersonName ?? null,
-      mobileNumber: req.body.mobileNumber ? String(req.body.mobileNumber) : null,
-      address: req.body.address ?? null,
-      email: req.body.email ?? null,
-      businessSector: req.body.businessSector ?? null,
-      zone: req.body.zone ?? null,
-      landmark: req.body.landmark ?? null,
-      existingWebsite: req.body.existingWebsite ?? null,
-      smmPresence: req.body.smmPresence ?? null,
-      meetingStatus: req.body.meetingStatus ?? null,
-      userId: req.body.userId ?? record.userId,
-    };
+    // 🔹 Only keep keys that actually exist in the ASheet model (safety)
+    const allowedFields = [
+      "sr",
+      "sourcedFrom",
+      "sourcedBy",
+      "dateOfConnect",
+      "businessName",
+      "contactPersonName",
+      "mobileNumber",
+      "address",
+      "email",
+      "businessSector",
+      "zone",
+      "landmark",
+      "existingWebsite",
+      "smmPresence",
+      "meetingStatus",
+      "userId"
+    ];
 
-    await record.update(payload);
+    const updates = {};
+    for (const key of allowedFields) {
+      if (updateData[key] !== undefined) {
+        updates[key] = key === "mobileNumber"
+          ? String(updateData[key])
+          : updateData[key];
+      }
+    }
+
+    if (!Object.keys(updates).length) {
+      return ReE(res, "No valid fields to update", 400);
+    }
+
+    await record.update(updates);
 
     return ReS(res, { success: true, data: record }, 200);
   } catch (error) {
