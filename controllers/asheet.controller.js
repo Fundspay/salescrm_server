@@ -4,8 +4,6 @@ const { ReE, ReS } = require("../utils/util.service.js");
 const { Op, Sequelize } = require("sequelize");
 const XLSX = require("xlsx");
 
-const XLSX = require("xlsx"); // npm install xlsx
-
 // Create / Upload ASheet (Excel JSON)
 const createASheet = async (req, res) => {
   try {
