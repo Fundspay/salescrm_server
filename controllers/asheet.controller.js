@@ -142,21 +142,22 @@ const getASheets = async (req, res) => {
     // Fetch all ASheet records
     const records = await model.ASheet.findAll({ raw: true });
 
-    // Fetch active users and include a virtual 'name' for ordering
+    // Fetch active users
     const users = await model.User.findAll({
-      where: { isActive: true },
-      attributes: [
-        "id",
-        "firstName",
-        "lastName",
-        "email",
-        [Sequelize.literal("firstName || ' ' || lastName"), "name"] // virtual name
-      ],
-      order: [[Sequelize.literal("firstName || ' ' || lastName"), "ASC"]],
-      raw: true
+      where: { isDeleted: false }, // or isActive if you have that field
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
     });
 
-    return ReS(res, { success: true, data: records, users }, 200);
+    // Add virtual 'name' field in JS and sort by it
+    const usersWithName = users
+      .map((u) => ({
+        ...u,
+        name: `${u.firstName} ${u.lastName}`.trim(),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return ReS(res, { success: true, data: records, users: usersWithName }, 200);
   } catch (error) {
     console.error("ASheet Fetch All Error:", error);
     return ReE(res, error.message, 500);
