@@ -7,13 +7,20 @@ const XLSX = require("xlsx");
 // Create / Upload ASheet (JSON data)
 const createASheet = async (req, res) => {
   try {
-    // Accept single object or array
     const dataArray = Array.isArray(req.body) ? req.body : [req.body];
     if (!dataArray.length) return ReE(res, "No data provided", 400);
 
     const insertedRecords = [];
 
     for (const data of dataArray) {
+      // Determine userId
+      const userId = data.userId ?? req.user?.id;
+      if (!userId) return ReE(res, "userId is required", 400);
+
+      // Check if user exists
+      const userExists = await model.User.findByPk(userId);
+      if (!userExists) return ReE(res, `User with id ${userId} does not exist`, 400);
+
       const payload = {
         sr: data.sr ?? null,
         sourcedFrom: data.sourcedFrom ?? null,
@@ -30,7 +37,7 @@ const createASheet = async (req, res) => {
         existingWebsite: data.existingWebsite ?? null,
         smmPresence: data.smmPresence ?? null,
         meetingStatus: data.meetingStatus ?? null,
-        userId: data.userId ?? req.user?.id ?? null,
+        userId: userId,
       };
 
       // Insert into DB
@@ -46,6 +53,7 @@ const createASheet = async (req, res) => {
 };
 
 module.exports.createASheet = createASheet;
+
 
 
 
