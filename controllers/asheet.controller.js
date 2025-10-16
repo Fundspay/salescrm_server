@@ -203,3 +203,43 @@ const deleteASheet = async (req, res) => {
 
 module.exports.deleteASheet = deleteASheet;
 
+const getindividualUserId = async (req, res) => {
+  try {
+    const userId = req.query.userId || req.params.userId;
+    if (!userId) return ReE(res, "userId is required", 400);
+
+    // Find the user
+    const user = await model.User.findOne({
+      where: { id: userId },
+      attributes: ["id", "name", "email", "mobileNumber"],
+      raw: true,
+    });
+
+    if (!user) return ReE(res, "User not found", 404);
+
+    const userName = user.name.trim();
+
+    // Find all ASheet rows where sourcedBy matches user's name
+    const aSheetData = await model.ASheet.findAll({
+      where: {
+        sourcedBy: { [Op.iLike]: userName } // case-insensitive match
+      },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+    });
+
+    return ReS(res, {
+      success: true,
+      userId: user.id,
+      userName,
+      totalRecords: aSheetData.length,
+      data: aSheetData,
+    });
+  } catch (error) {
+    console.error("Get ASheet By UserId Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.getindividualUserId = getindividualUserId;
+
