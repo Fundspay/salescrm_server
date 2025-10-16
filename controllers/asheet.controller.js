@@ -2,12 +2,19 @@
 const model = require("../models/index");
 const { ReE, ReS } = require("../utils/util.service.js");
 const { Op, Sequelize } = require("sequelize");
+const XLSX = require("xlsx");
 
-// Create / Upload ASheet (Excel JSON)
 const createASheet = async (req, res) => {
   try {
-    const dataArray = Array.isArray(req.body) ? req.body : [req.body];
-    if (!dataArray.length) return ReE(res, "No data provided", 400);
+    if (!req.file) return ReE(res, "Excel file is required", 400);
+
+    // 🔹 Read Excel file
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const dataArray = XLSX.utils.sheet_to_json(sheet, { defval: null }); // defval=null keeps empty cells as null
+
+    if (!dataArray.length) return ReE(res, "No data found in Excel", 400);
 
     const duplicateDetails = [];
     const nullFieldDetails = [];
@@ -35,7 +42,7 @@ const createASheet = async (req, res) => {
             userId: data.userId ?? req.user?.id ?? null,
           };
 
-          // Null Field Check (just for reporting, don't block insertion)
+          // Null Field Check (for reporting only)
           const nullFields = Object.keys(payload).filter(
             (key) => payload[key] === null && key !== "userId"
           );
@@ -47,7 +54,7 @@ const createASheet = async (req, res) => {
             });
           }
 
-          // Duplicate Check only
+          // Duplicate Check
           const whereClause = {
             userId: payload.userId,
             businessName: payload.businessName,
@@ -65,12 +72,11 @@ const createASheet = async (req, res) => {
             return { success: false, type: "duplicate", data: payload };
           }
 
-          // Insert Valid Record (nulls are allowed)
+          // Insert Valid Record
           const record = await model.ASheet.create(payload);
           validDetails.push({ row: index + 1, rowData: record });
           return { success: true, type: "valid", data: record };
         } catch (err) {
-          // If insertion fails due to DB error, still report as invalid
           console.error(`Error inserting row ${index + 1}:`, err);
           return { success: false, type: "invalid", error: err.message, data };
         }
@@ -85,12 +91,12 @@ const createASheet = async (req, res) => {
           total: dataArray.length,
           created: validDetails.length,
           duplicates: duplicateDetails.length,
-          invalid: 0, // removed invalids from previous logic
+          invalid: 0,
           nullFields: nullFieldDetails.length,
         },
         data: {
           duplicates: duplicateDetails,
-          invalid: [], // keep format same
+          invalid: [],
           nullFields: nullFieldDetails,
           valid: validDetails,
         },
@@ -137,10 +143,34 @@ const updateASheetFields = async (req, res) => {
 module.exports.updateASheetFields = updateASheetFields;
 
 // Get all ASheets
+// Get all ASheets
 const getASheets = async (req, res) => {
   try {
-    // Fetch all ASheet records
-    const records = await model.ASheet.findAll({ raw: true });
+    // Fetch all ASheet records, including null values
+    const records = await model.ASheet.findAll({
+      raw: true,
+      attributes: [
+        "id",
+        "sr",
+        "sourcedFrom",
+        "sourcedBy",
+        "dateOfConnect",
+        "businessName",
+        "contactPersonName",
+        "mobileNumber",
+        "address",
+        "email",
+        "businessSector",
+        "zone",
+        "landmark",
+        "existingWebsite",
+        "smmPresence",
+        "meetingStatus",
+        "userId",
+        "createdAt",
+        "updatedAt",
+      ],
+    });
 
     // Fetch active users
     const users = await model.User.findAll({
@@ -165,6 +195,7 @@ const getASheets = async (req, res) => {
 };
 
 module.exports.getASheets = getASheets;
+
 
 // Get single ASheet
 const getASheetById = async (req, res) => {
