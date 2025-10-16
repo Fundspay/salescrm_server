@@ -4,21 +4,12 @@ const { ReE, ReS } = require("../utils/util.service.js");
 const { Op, Sequelize } = require("sequelize");
 const XLSX = require("xlsx");
 
-// Create / Upload ASheet (Excel JSON)
+// Create / Upload ASheet (JSON data)
 const createASheet = async (req, res) => {
   try {
-    // Use Excel file instead of req.body
-    if (!req.file) return ReE(res, "Excel file is required", 400);
-
-    // 🔹 Read Excel file
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-
-    // Convert sheet to JSON, keep empty cells as null
-    const dataArray = XLSX.utils.sheet_to_json(sheet, { defval: null });
-
-    if (!dataArray.length) return ReE(res, "No data found in Excel", 400);
+    // Accept single object or array
+    const dataArray = Array.isArray(req.body) ? req.body : [req.body];
+    if (!dataArray.length) return ReE(res, "No data provided", 400);
 
     const duplicateDetails = [];
     const nullFieldDetails = [];
@@ -95,12 +86,12 @@ const createASheet = async (req, res) => {
           total: dataArray.length,
           created: validDetails.length,
           duplicates: duplicateDetails.length,
-          invalid: 0, // same as original
+          invalid: 0, // keep same as before
           nullFields: nullFieldDetails.length,
         },
         data: {
           duplicates: duplicateDetails,
-          invalid: [], // keep format same
+          invalid: [],
           nullFields: nullFieldDetails,
           valid: validDetails,
         },
@@ -114,6 +105,7 @@ const createASheet = async (req, res) => {
 };
 
 module.exports.createASheet = createASheet;
+
 
 
 // Update ASheet fields
