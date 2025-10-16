@@ -9,5 +9,6 @@ router.get("/list", asheetController.getASheets);
 router.get("/list/:id", asheetController.getASheetById);
 router.delete("/asheet/:id", asheetController.deleteASheet);
 router.get("/individual/:userId", asheetController.getindividualUserId);
+router.get("/followup", asheetController.fetchFollowUpTarget);
 
 module.exports = router;

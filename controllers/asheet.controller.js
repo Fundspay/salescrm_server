@@ -305,4 +305,49 @@ const getindividualUserId = async (req, res) => {
 
 module.exports.getindividualUserId = getindividualUserId;
 
+const fetchFollowUpTarget = async (req, res) => {
+  try {
+    let { startDate, endDate } = req.query;
+    const today = new Date();
+
+    let sDate, eDate;
+
+    // 🔹 If date range provided, use it
+    if (startDate && endDate) {
+      sDate = new Date(startDate);
+      eDate = new Date(endDate);
+    } else {
+      // Default to today's date
+      sDate = new Date(today.setHours(0, 0, 0, 0));
+      eDate = new Date(today.setHours(23, 59, 59, 999));
+    }
+
+    // 🔹 Fetch all ASheet records where meetingStatus includes "Follow Up"
+    const followUpRows = await model.ASheet.findAll({
+      where: {
+        meetingStatus: { [Op.iLike]: "%Follow Up%" }, // case-insensitive
+        dateOfConnect: { [Op.between]: [sDate, eDate] },
+      },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+    });
+
+    // 🔹 Count total Follow Up
+    const totalFollowUp = followUpRows.length;
+
+    return ReS(res, {
+      success: true,
+      data: followUpRows,
+      totalFollowUp,
+    }, 200);
+
+  } catch (error) {
+    console.error("fetchFollowUpTarget Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.fetchFollowUpTarget = fetchFollowUpTarget;
+
+
 
