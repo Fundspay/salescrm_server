@@ -69,3 +69,106 @@ const updateASheetFollowupFields = async (req, res) => {
 };
 
 module.exports.updateASheetFollowupFields = updateASheetFollowupFields;
+
+const getC1ScheduledByUser = async (req, res) => {
+  try {
+    const userId = req.query.userId || req.params.userId;
+    if (!userId) return ReE(res, "userId is required", 400);
+
+    // Fetch the user safely
+    let user;
+    try {
+      user = await model.User.findOne({
+        where: { id: userId },
+        attributes: ["id", "firstName", "lastName", "email", "mobileNumber"],
+        raw: true,
+      });
+    } catch (err) {
+      console.warn("⚠️ mobileNumber column missing in User table, skipping it...");
+      user = await model.User.findOne({
+        where: { id: userId },
+        attributes: ["id", "firstName", "lastName", "email"],
+        raw: true,
+      });
+    }
+
+    if (!user) return ReE(res, "User not found", 404);
+
+    const userName = `${user.firstName} ${user.lastName}`.trim();
+
+    // Fetch ASheet records for that user where meetingStatus includes "C1 Scheduled"
+    const aSheetData = await model.ASheet.findAll({
+      where: {
+        sourcedBy: { [Op.iLike]: userName },
+        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" }, // extra filter
+      },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+      attributes: [
+        "id",
+        "sr",
+        "sourcedFrom",
+        "sourcedBy",
+        "dateOfConnect",
+        "businessName",
+        "contactPersonName",
+        "mobileNumber",
+        "address",
+        "email",
+        "businessSector",
+        "zone",
+        "landmark",
+        "existingWebsite",
+        "smmPresence",
+        "meetingStatus",
+        "userId",
+
+        // 🔹 Newly added C1-C4 tracking fields
+        "dateOfC1Connect",
+        "c1Status",
+        "c1Comment",
+        "dateOfC2Clarity",
+        "c2Status",
+        "c2Comment",
+        "dateOfC3Clarity",
+        "c3Status",
+        "c3Comment",
+        "dateOfC4Customer",
+        "c4Status",
+        "c4Comment",
+
+        "createdAt",
+        "updatedAt",
+      ],
+    });
+
+    // Fetch all registered users
+    const allUsers = await model.User.findAll({
+      where: { isDeleted: false },
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
+    });
+
+    const allUsersWithName = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
+    return ReS(res, {
+      success: true,
+      userId: user.id,
+      userName,
+      totalRecords: aSheetData.length,
+      data: aSheetData,
+      users: allUsersWithName,
+    });
+  } catch (error) {
+    console.error("Get C1 Scheduled By User Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.getC1ScheduledByUser = getC1ScheduledByUser;
