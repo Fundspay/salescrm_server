@@ -305,8 +305,6 @@ const getindividualUserId = async (req, res) => {
 
 module.exports.getindividualUserId = getindividualUserId;
 
-const { Op } = require("sequelize");
-const model = require("../models"); // adjust path if needed
 
 const fetchFollowUpTarget = async (req, res) => {
   try {
