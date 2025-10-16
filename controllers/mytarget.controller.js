@@ -187,3 +187,67 @@ var fetchTargets = async function (req, res) {
 };
 
 module.exports.fetchTargets = fetchTargets;
+// 🔹 Fetch C1 Target and Token (GET)
+var fetchC1Target = async function (req, res) {
+  try {
+    let { userId, startDate, endDate } = req.query;
+    if (!userId) return ReE(res, "userId is required", 400);
+
+    userId = parseInt(userId, 10);
+    const today = new Date();
+
+    let sDate, eDate;
+
+    // 🔹 If date range provided, use it
+    if (startDate && endDate) {
+      sDate = new Date(startDate);
+      eDate = new Date(endDate);
+    } 
+    // 🔹 Else use today's date as default
+    else {
+      sDate = new Date(today.setHours(0, 0, 0, 0));
+      eDate = new Date(today.setHours(23, 59, 59, 999));
+    }
+
+    // 🔹 Fetch targets for date range or today's date
+    const targets = await model.MyTarget.findAll({
+      where: {
+        userId,
+        targetDate: { [Op.between]: [sDate, eDate] },
+      },
+      attributes: ["id", "targetDate", "c1Target", "token"], // include token
+      order: [["targetDate", "ASC"]],
+    });
+
+    // 🔹 Format response
+    const formatted = targets.map((t) => ({
+      date: new Date(t.targetDate).toISOString().split("T")[0],
+      c1Target: t.c1Target,
+      token: t.token,
+    }));
+
+    // 🔹 If no data found for today, return default 0 & null
+    if (formatted.length === 0 && !startDate && !endDate) {
+      formatted.push({
+        date: today.toISOString().split("T")[0],
+        c1Target: 0,
+        token: null,
+      });
+    }
+
+    // 🔹 Calculate total
+    const totalC1Target = formatted.reduce((sum, t) => sum + (t.c1Target || 0), 0);
+
+    return ReS(res, {
+      success: true,
+      userId,
+      data: formatted,
+      totalC1Target,
+    }, 200);
+  } catch (error) {
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.fetchC1Target = fetchC1Target;
+
