@@ -22,6 +22,23 @@ module.exports = (sequelize, Sequelize) => {
       smmPresence: { type: Sequelize.STRING, allowNull: true },
       meetingStatus: { type: Sequelize.STRING, allowNull: true },
 
+      // 🔹 Added new fields (C1 to C4 tracking)
+      dateOfC1Connect: { type: Sequelize.DATEONLY, allowNull: true },
+      c1Status: { type: Sequelize.STRING, allowNull: true },
+      c1Comment: { type: Sequelize.STRING, allowNull: true },
+
+      dateOfC2Clarity: { type: Sequelize.DATEONLY, allowNull: true },
+      c2Status: { type: Sequelize.STRING, allowNull: true },
+      c2Comment: { type: Sequelize.STRING, allowNull: true },
+
+      dateOfC3Clarity: { type: Sequelize.DATEONLY, allowNull: true },
+      c3Status: { type: Sequelize.STRING, allowNull: true },
+      c3Comment: { type: Sequelize.STRING, allowNull: true },
+
+      dateOfC4Customer: { type: Sequelize.DATEONLY, allowNull: true },
+      c4Status: { type: Sequelize.STRING, allowNull: true },
+      c4Comment: { type: Sequelize.STRING, allowNull: true },
+
       // 🔹 Foreign key (User)
       userId: { type: Sequelize.BIGINT, allowNull: true },
 
@@ -31,7 +48,7 @@ module.exports = (sequelize, Sequelize) => {
       updatedAt: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.NOW },
     },
     {
-      timestamps: true, 
+      timestamps: true,
     }
   );
 
