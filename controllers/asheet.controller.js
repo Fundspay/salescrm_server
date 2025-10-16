@@ -221,7 +221,7 @@ const getindividualUserId = async (req, res) => {
     const userId = req.query.userId || req.params.userId;
     if (!userId) return ReE(res, "userId is required", 400);
 
-    // Try fetching user safely
+    // Fetch the user safely
     let user;
     try {
       user = await model.User.findOne({
@@ -230,7 +230,7 @@ const getindividualUserId = async (req, res) => {
         raw: true,
       });
     } catch (err) {
-      // Fallback: if mobileNumber column doesn’t exist, fetch remaining fields
+      // Fallback if mobileNumber column doesn't exist
       console.warn("⚠️ mobileNumber column missing in User table, skipping it...");
       user = await model.User.findOne({
         where: { id: userId },
@@ -241,15 +241,13 @@ const getindividualUserId = async (req, res) => {
 
     if (!user) return ReE(res, "User not found", 404);
 
+    // Combine firstName + lastName
     const userName = `${user.firstName} ${user.lastName}`.trim();
 
-    // Fetch ASheet records for that user (case-insensitive match)
+    // Fetch ASheet records for that user (case-insensitive match on sourcedBy)
     const aSheetData = await model.ASheet.findAll({
       where: {
-        [Op.or]: [
-          { sourcedBy: { [Op.iLike]: userName } },
-          { userId: user.id }
-        ]
+        sourcedBy: { [Op.iLike]: userName } // only match if sourcedBy = user's full name
       },
       order: [["dateOfConnect", "ASC"]],
       raw: true,
@@ -276,12 +274,28 @@ const getindividualUserId = async (req, res) => {
       ],
     });
 
+    // Fetch all registered users
+    const allUsers = await model.User.findAll({
+      where: { isDeleted: false },
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
+    });
+
+    const allUsersWithName = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
     return ReS(res, {
       success: true,
       userId: user.id,
       userName,
       totalRecords: aSheetData.length,
       data: aSheetData,
+      allUsers: allUsersWithName, // list of all registered users
     });
   } catch (error) {
     console.error("Get ASheet By UserId Error:", error);
@@ -290,4 +304,5 @@ const getindividualUserId = async (req, res) => {
 };
 
 module.exports.getindividualUserId = getindividualUserId;
+
 
