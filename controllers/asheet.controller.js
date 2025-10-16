@@ -295,7 +295,7 @@ const getindividualUserId = async (req, res) => {
       userName,
       totalRecords: aSheetData.length,
       data: aSheetData,
-      allUsers: allUsersWithName, // list of all registered users
+      users: allUsersWithName, // list of all registered users
     });
   } catch (error) {
     console.error("Get ASheet By UserId Error:", error);
