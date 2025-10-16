@@ -323,7 +323,7 @@ const fetchFollowUpTarget = async (req, res) => {
     // 🔹 Fetch all registered users
     const users = await model.User.findAll({
       where: { isDeleted: false }, // only active users
-      attributes: ["id", "firstName", "lastName", "email"],
+      attributes: ["id", "firstName", "lastName", "email", "name"],
       raw: true,
     });
 
