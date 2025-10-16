@@ -60,29 +60,41 @@ const updateASheetFields = async (req, res) => {
     const record = await model.ASheet.findByPk(req.params.id);
     if (!record) return ReE(res, "ASheet record not found", 404);
 
-    const allowedFields = [
-      "sr", "sourcedFrom", "sourcedBy", "dateOfConnect", "businessName",
-      "contactPersonName", "mobileNumber", "address", "email",
-      "businessSector", "zone", "landmark", "existingWebsite",
-      "smmPresence", "meetingStatus", "userId"
-    ];
-
-    const updates = {};
-    for (const f of allowedFields) {
-      if (req.body[f] !== undefined) updates[f] = req.body[f];
+    // Determine userId (if updating userId)
+    if (req.body.userId !== undefined) {
+      const userExists = await model.User.findByPk(req.body.userId);
+      if (!userExists) return ReE(res, `User with id ${req.body.userId} does not exist`, 400);
     }
 
-    if (!Object.keys(updates).length) {
-      return ReE(res, "No fields to update", 400);
-    }
+    // Prepare payload with all fields from body, store nulls as null
+    const payload = {
+      sr: req.body.sr ?? null,
+      sourcedFrom: req.body.sourcedFrom ?? null,
+      sourcedBy: req.body.sourcedBy ?? null,
+      dateOfConnect: req.body.dateOfConnect ?? null,
+      businessName: req.body.businessName ?? null,
+      contactPersonName: req.body.contactPersonName ?? null,
+      mobileNumber: req.body.mobileNumber ? String(req.body.mobileNumber) : null,
+      address: req.body.address ?? null,
+      email: req.body.email ?? null,
+      businessSector: req.body.businessSector ?? null,
+      zone: req.body.zone ?? null,
+      landmark: req.body.landmark ?? null,
+      existingWebsite: req.body.existingWebsite ?? null,
+      smmPresence: req.body.smmPresence ?? null,
+      meetingStatus: req.body.meetingStatus ?? null,
+      userId: req.body.userId ?? record.userId,
+    };
 
-    await record.update(updates);
+    await record.update(payload);
+
     return ReS(res, { success: true, data: record }, 200);
   } catch (error) {
     console.error("ASheet Update Error:", error);
     return ReE(res, error.message, 500);
   }
 };
+
 module.exports.updateASheetFields = updateASheetFields;
 
 // Get all ASheets
@@ -145,8 +157,6 @@ const getASheets = async (req, res) => {
 };
 
 module.exports.getASheets = getASheets;
-
-
 
 // Get single ASheet
 const getASheetById = async (req, res) => {
