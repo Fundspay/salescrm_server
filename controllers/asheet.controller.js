@@ -11,94 +11,34 @@ const createASheet = async (req, res) => {
     const dataArray = Array.isArray(req.body) ? req.body : [req.body];
     if (!dataArray.length) return ReE(res, "No data provided", 400);
 
-    const duplicateDetails = [];
-    const nullFieldDetails = [];
-    const validDetails = [];
+    const insertedRecords = [];
 
-    const results = await Promise.all(
-      dataArray.map(async (data, index) => {
-        try {
-          const payload = {
-            sr: data.sr ?? null,
-            sourcedFrom: data.sourcedFrom ?? null,
-            sourcedBy: data.sourcedBy ?? null,
-            dateOfConnect: data.dateOfConnect ?? null,
-            businessName: data.businessName ?? null,
-            contactPersonName: data.contactPersonName ?? null,
-            mobileNumber: data.mobileNumber ? String(data.mobileNumber) : null,
-            address: data.address ?? null,
-            email: data.email ?? null,
-            businessSector: data.businessSector ?? null,
-            zone: data.zone ?? null,
-            landmark: data.landmark ?? null,
-            existingWebsite: data.existingWebsite ?? null,
-            smmPresence: data.smmPresence ?? null,
-            meetingStatus: data.meetingStatus ?? null,
-            userId: data.userId ?? req.user?.id ?? null,
-          };
+    for (const data of dataArray) {
+      const payload = {
+        sr: data.sr ?? null,
+        sourcedFrom: data.sourcedFrom ?? null,
+        sourcedBy: data.sourcedBy ?? null,
+        dateOfConnect: data.dateOfConnect ?? null,
+        businessName: data.businessName ?? null,
+        contactPersonName: data.contactPersonName ?? null,
+        mobileNumber: data.mobileNumber ? String(data.mobileNumber) : null,
+        address: data.address ?? null,
+        email: data.email ?? null,
+        businessSector: data.businessSector ?? null,
+        zone: data.zone ?? null,
+        landmark: data.landmark ?? null,
+        existingWebsite: data.existingWebsite ?? null,
+        smmPresence: data.smmPresence ?? null,
+        meetingStatus: data.meetingStatus ?? null,
+        userId: data.userId ?? req.user?.id ?? null,
+      };
 
-          // Check if all fields except userId are null
-          const fieldsExceptUserId = Object.keys(payload).filter(k => k !== "userId");
-          const allNull = fieldsExceptUserId.every(key => payload[key] === null);
+      // Insert into DB
+      const record = await model.ASheet.create(payload);
+      insertedRecords.push(record);
+    }
 
-          if (allNull) {
-            nullFieldDetails.push({
-              row: index + 1,
-              nullFields: fieldsExceptUserId,
-              rowData: payload,
-            });
-            return { success: false, type: "null", data: payload };
-          }
-
-          // Duplicate Check
-          const whereClause = {
-            userId: payload.userId,
-            businessName: payload.businessName,
-          };
-          if (payload.mobileNumber) whereClause.mobileNumber = payload.mobileNumber;
-          if (payload.email) whereClause.email = payload.email;
-
-          const existing = await model.ASheet.findOne({ where: whereClause });
-          if (existing) {
-            duplicateDetails.push({
-              row: index + 1,
-              reason: "Duplicate record",
-              rowData: payload,
-            });
-            return { success: false, type: "duplicate", data: payload };
-          }
-
-          // Insert Valid Record
-          const record = await model.ASheet.create(payload);
-          validDetails.push({ row: index + 1, rowData: record });
-          return { success: true, type: "valid", data: record };
-        } catch (err) {
-          console.error(`Error inserting row ${index + 1}:`, err);
-          return { success: false, type: "invalid", error: err.message, data };
-        }
-      })
-    );
-
-    return ReS(
-      res,
-      {
-        success: true,
-        summary: {
-          total: dataArray.length,
-          created: validDetails.length,
-          duplicates: duplicateDetails.length,
-          invalid: 0,
-          nullFields: nullFieldDetails.length,
-        },
-        data: {
-          duplicates: duplicateDetails,
-          invalid: [],
-          nullFields: nullFieldDetails,
-          valid: validDetails,
-        },
-      },
-      201
-    );
+    return ReS(res, { success: true, total: insertedRecords.length, data: insertedRecords }, 201);
   } catch (error) {
     console.error("ASheet Create Error:", error);
     return ReE(res, error.message, 500);
@@ -106,6 +46,7 @@ const createASheet = async (req, res) => {
 };
 
 module.exports.createASheet = createASheet;
+
 
 
 // Update ASheet fields
