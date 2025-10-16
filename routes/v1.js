@@ -7,6 +7,7 @@ const router = express.Router();
 const userRouter = require("./user.route");
 const genderRouter = require("./gender.route");
 const myTargetRouter = require("./mytarget.route");
+const asheetRouter = require("./asheet.route");
 
 // Health Check Route
 router.get("/health", (req, res) => {
@@ -19,6 +20,7 @@ router.get("/health", (req, res) => {
 router.use("/user", userRouter);
 router.use("/gender", genderRouter);
 router.use("/mytarget", myTargetRouter);
+router.use("/asheet", asheetRouter);
 
 
 
