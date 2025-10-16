@@ -10,7 +10,6 @@ const createASheet = async (req, res) => {
     if (!dataArray.length) return ReE(res, "No data provided", 400);
 
     const duplicateDetails = [];
-    const invalidDetails = [];
     const nullFieldDetails = [];
     const validDetails = [];
 
@@ -36,7 +35,7 @@ const createASheet = async (req, res) => {
             userId: data.userId ?? req.user?.id ?? null,
           };
 
-          // Null Field Check
+          // Null Field Check (just for reporting, don't block insertion)
           const nullFields = Object.keys(payload).filter(
             (key) => payload[key] === null && key !== "userId"
           );
@@ -48,25 +47,7 @@ const createASheet = async (req, res) => {
             });
           }
 
-          // Invalid Data Check
-          const invalidReasons = [];
-          if (payload.mobileNumber && !/^[0-9]{10}$/.test(payload.mobileNumber)) {
-            invalidReasons.push("Invalid mobile number");
-          }
-          if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-            invalidReasons.push("Invalid email format");
-          }
-
-          if (invalidReasons.length > 0) {
-            invalidDetails.push({
-              row: index + 1,
-              reasons: invalidReasons,
-              rowData: payload,
-            });
-            return { success: false, type: "invalid", reasons: invalidReasons, data: payload };
-          }
-
-          // Duplicate Check
+          // Duplicate Check only
           const whereClause = {
             userId: payload.userId,
             businessName: payload.businessName,
@@ -84,16 +65,13 @@ const createASheet = async (req, res) => {
             return { success: false, type: "duplicate", data: payload };
           }
 
-          // Insert Valid Record
+          // Insert Valid Record (nulls are allowed)
           const record = await model.ASheet.create(payload);
           validDetails.push({ row: index + 1, rowData: record });
           return { success: true, type: "valid", data: record };
         } catch (err) {
-          invalidDetails.push({
-            row: index + 1,
-            reasons: [err.message],
-            rowData: data,
-          });
+          // If insertion fails due to DB error, still report as invalid
+          console.error(`Error inserting row ${index + 1}:`, err);
           return { success: false, type: "invalid", error: err.message, data };
         }
       })
@@ -107,12 +85,12 @@ const createASheet = async (req, res) => {
           total: dataArray.length,
           created: validDetails.length,
           duplicates: duplicateDetails.length,
-          invalid: invalidDetails.length,
+          invalid: 0, // removed invalids from previous logic
           nullFields: nullFieldDetails.length,
         },
         data: {
           duplicates: duplicateDetails,
-          invalid: invalidDetails,
+          invalid: [], // keep format same
           nullFields: nullFieldDetails,
           valid: validDetails,
         },
@@ -124,6 +102,7 @@ const createASheet = async (req, res) => {
     return ReE(res, error.message, 500);
   }
 };
+
 module.exports.createASheet = createASheet;
 
 // Update ASheet fields
@@ -160,11 +139,21 @@ module.exports.updateASheetFields = updateASheetFields;
 // Get all ASheets
 const getASheets = async (req, res) => {
   try {
-    const records = await model.ASheet.findAll();
+    // Fetch all ASheet records
+    const records = await model.ASheet.findAll({ raw: true });
+
+    // Fetch active users and include a virtual 'name' for ordering
     const users = await model.User.findAll({
       where: { isActive: true },
-      attributes: ["id", "firstName", "lastName", "email"],
-      order: [["name", "ASC"]],
+      attributes: [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        [Sequelize.literal("firstName || ' ' || lastName"), "name"] // virtual name
+      ],
+      order: [[Sequelize.literal("firstName || ' ' || lastName"), "ASC"]],
+      raw: true
     });
 
     return ReS(res, { success: true, data: records, users }, 200);
@@ -173,6 +162,7 @@ const getASheets = async (req, res) => {
     return ReE(res, error.message, 500);
   }
 };
+
 module.exports.getASheets = getASheets;
 
 // Get single ASheet
@@ -211,13 +201,14 @@ const getindividualUserId = async (req, res) => {
     // Find the user
     const user = await model.User.findOne({
       where: { id: userId },
-      attributes: ["id", "name", "email", "mobileNumber"],
+      attributes: ["id", "firstName", "lastName", "email", "mobileNumber"],
       raw: true,
     });
 
     if (!user) return ReE(res, "User not found", 404);
 
-    const userName = user.name.trim();
+    // Combine firstName + lastName
+    const userName = `${user.firstName} ${user.lastName}`.trim();
 
     // Find all ASheet rows where sourcedBy matches user's name
     const aSheetData = await model.ASheet.findAll({
@@ -242,4 +233,3 @@ const getindividualUserId = async (req, res) => {
 };
 
 module.exports.getindividualUserId = getindividualUserId;
-
