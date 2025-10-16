@@ -351,6 +351,131 @@ const fetchFollowUpTarget = async (req, res) => {
 module.exports.fetchFollowUpTarget = fetchFollowUpTarget;
 
 
+const fetchCNA = async (req, res) => {
+  try {
+    const rows = await model.ASheet.findAll({
+      where: { meetingStatus: { [Op.iLike]: "%CNA%" } },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+    });
 
+    const totalCNA = rows.length;
 
+    const allUsers = await model.User.findAll({
+      where: { isDeleted: false },
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
+    });
 
+    const users = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
+    return ReS(res, { success: true, data: rows, totalCNA, users }, 200);
+  } catch (error) {
+    console.error("fetchCNA Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+module.exports.fetchCNA = fetchCNA;
+
+const fetchNotInterested = async (req, res) => {
+  try {
+    const rows = await model.ASheet.findAll({
+      where: { meetingStatus: { [Op.iLike]: "%Not Interested%" } },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+    });
+
+    const totalNotInterested = rows.length;
+
+    const allUsers = await model.User.findAll({
+      where: { isDeleted: false },
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
+    });
+
+    const users = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
+    return ReS(res, { success: true, data: rows, totalNotInterested, users }, 200);
+  } catch (error) {
+    console.error("fetchNotInterested Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+module.exports.fetchNotInterested = fetchNotInterested;
+
+const fetchSwitchOff = async (req, res) => {
+  try {
+    const rows = await model.ASheet.findAll({
+      where: { meetingStatus: { [Op.iLike]: "%Switch Off%" } },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+    });
+
+    const totalSwitchOff = rows.length;
+
+    const allUsers = await model.User.findAll({
+      where: { isDeleted: false },
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
+    });
+
+    const users = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
+    return ReS(res, { success: true, data: rows, totalSwitchOff, users }, 200);
+  } catch (error) {
+    console.error("fetchSwitchOff Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+module.exports.fetchSwitchOff = fetchSwitchOff;
+
+const fetchWrongNumber = async (req, res) => {
+  try {
+    const rows = await model.ASheet.findAll({
+      where: { meetingStatus: { [Op.iLike]: "%Wrong Number%" } },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+    });
+
+    const totalWrongNumber = rows.length;
+
+    const allUsers = await model.User.findAll({
+      where: { isDeleted: false },
+      attributes: ["id", "firstName", "lastName", "email"],
+      raw: true,
+    });
+
+    const users = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
+    return ReS(res, { success: true, data: rows, totalWrongNumber, users }, 200);
+  } catch (error) {
+    console.error("fetchWrongNumber Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.fetchWrongNumber = fetchWrongNumber;
