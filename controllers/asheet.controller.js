@@ -54,9 +54,6 @@ const createASheet = async (req, res) => {
 
 module.exports.createASheet = createASheet;
 
-
-
-
 // Update ASheet fields
 const updateASheetFields = async (req, res) => {
   try {
@@ -89,7 +86,6 @@ const updateASheetFields = async (req, res) => {
 module.exports.updateASheetFields = updateASheetFields;
 
 // Get all ASheets
-// Get all ASheets
 const getASheets = async (req, res) => {
   try {
     // Fetch all ASheet records, including null values
@@ -120,20 +116,28 @@ const getASheets = async (req, res) => {
 
     // Fetch active users
     const users = await model.User.findAll({
-      where: { isDeleted: false }, // or isActive if you have that field
+      where: { isDeleted: false },
       attributes: ["id", "firstName", "lastName", "email"],
       raw: true,
     });
 
-    // Add virtual 'name' field in JS and sort by it
-    const usersWithName = users
-      .map((u) => ({
-        ...u,
-        name: `${u.firstName} ${u.lastName}`.trim(),
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    // Add virtual 'name' field
+    const usersWithName = users.map((u) => ({
+      ...u,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
 
-    return ReS(res, { success: true, data: records, users: usersWithName }, 200);
+    // Return response
+    return ReS(
+      res,
+      {
+        success: true,
+        total: records.length,
+        data: records,
+        users: usersWithName,
+      },
+      200
+    );
   } catch (error) {
     console.error("ASheet Fetch All Error:", error);
     return ReE(res, error.message, 500);
@@ -141,6 +145,7 @@ const getASheets = async (req, res) => {
 };
 
 module.exports.getASheets = getASheets;
+
 
 
 // Get single ASheet
