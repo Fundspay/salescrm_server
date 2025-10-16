@@ -238,11 +238,18 @@ var fetchC1Target = async function (req, res) {
     // 🔹 Calculate total
     const totalC1Target = formatted.reduce((sum, t) => sum + (t.c1Target || 0), 0);
 
+    // 🔹 Calculate total token (sum numeric tokens only)
+    const totalToken = formatted.reduce((sum, t) => {
+      const num = parseFloat(t.token);
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+
     return ReS(res, {
       success: true,
       userId,
       data: formatted,
       totalC1Target,
+      totalToken,
     }, 200);
   } catch (error) {
     return ReE(res, error.message, 500);
@@ -250,4 +257,5 @@ var fetchC1Target = async function (req, res) {
 };
 
 module.exports.fetchC1Target = fetchC1Target;
+
 
