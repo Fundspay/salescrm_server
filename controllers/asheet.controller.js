@@ -37,16 +37,17 @@ const createASheet = async (req, res) => {
             userId: data.userId ?? req.user?.id ?? null,
           };
 
-          // Null Field Check (for reporting only)
-          const nullFields = Object.keys(payload).filter(
-            (key) => payload[key] === null && key !== "userId"
-          );
-          if (nullFields.length > 0) {
+          // Check if all fields except userId are null
+          const fieldsExceptUserId = Object.keys(payload).filter(k => k !== "userId");
+          const allNull = fieldsExceptUserId.every(key => payload[key] === null);
+
+          if (allNull) {
             nullFieldDetails.push({
               row: index + 1,
-              nullFields,
+              nullFields: fieldsExceptUserId,
               rowData: payload,
             });
+            return { success: false, type: "null", data: payload };
           }
 
           // Duplicate Check
@@ -86,7 +87,7 @@ const createASheet = async (req, res) => {
           total: dataArray.length,
           created: validDetails.length,
           duplicates: duplicateDetails.length,
-          invalid: 0, // keep same as before
+          invalid: 0,
           nullFields: nullFieldDetails.length,
         },
         data: {
@@ -105,7 +106,6 @@ const createASheet = async (req, res) => {
 };
 
 module.exports.createASheet = createASheet;
-
 
 
 // Update ASheet fields
