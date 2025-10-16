@@ -187,7 +187,7 @@ var fetchTargets = async function (req, res) {
 };
 
 module.exports.fetchTargets = fetchTargets;
-// 🔹 Fetch C1 Target and Token (GET)
+
 var fetchC1Target = async function (req, res) {
   try {
     let { userId, startDate, endDate } = req.query;
@@ -209,7 +209,7 @@ var fetchC1Target = async function (req, res) {
       eDate = new Date(today.setHours(23, 59, 59, 999));
     }
 
-    // 🔹 Fetch targets for date range or today's date
+    // 🔹 Fetch targets from MyTarget
     const targets = await model.MyTarget.findAll({
       where: {
         userId,
@@ -235,7 +235,7 @@ var fetchC1Target = async function (req, res) {
       });
     }
 
-    // 🔹 Calculate total
+    // 🔹 Calculate total c1Target
     const totalC1Target = formatted.reduce((sum, t) => sum + (t.c1Target || 0), 0);
 
     // 🔹 Calculate total token (sum numeric tokens only)
@@ -244,18 +244,30 @@ var fetchC1Target = async function (req, res) {
       return sum + (isNaN(num) ? 0 : num);
     }, 0);
 
+    // 🔹 Fetch achieved target from ASheet where meetingStatus includes "C1 Scheduled"
+    const achievedCount = await model.ASheet.count({
+      where: {
+        userId,
+        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" }, // case-insensitive match
+        dateOfConnect: { [Op.between]: [sDate, eDate] },
+      },
+    });
+
     return ReS(res, {
       success: true,
       userId,
       data: formatted,
       totalC1Target,
       totalToken,
+      achievedC1Target: achievedCount, // added field
     }, 200);
   } catch (error) {
+    console.error("fetchC1Target Error:", error);
     return ReE(res, error.message, 500);
   }
 };
 
 module.exports.fetchC1Target = fetchC1Target;
+
 
 
