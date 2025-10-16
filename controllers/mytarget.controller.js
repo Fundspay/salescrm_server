@@ -198,35 +198,29 @@ var fetchC1Target = async function (req, res) {
 
     let sDate, eDate;
 
-    // 🔹 If date range provided, use it
     if (startDate && endDate) {
       sDate = new Date(startDate);
       eDate = new Date(endDate);
-    } 
-    // 🔹 Else use today's date as default
-    else {
+    } else {
       sDate = new Date(today.setHours(0, 0, 0, 0));
       eDate = new Date(today.setHours(23, 59, 59, 999));
     }
 
-    // 🔹 Fetch targets from MyTarget
     const targets = await model.MyTarget.findAll({
       where: {
         userId,
         targetDate: { [Op.between]: [sDate, eDate] },
       },
-      attributes: ["id", "targetDate", "c1Target", "token"], // include token
+      attributes: ["id", "targetDate", "c1Target", "token"],
       order: [["targetDate", "ASC"]],
     });
 
-    // 🔹 Format response
     const formatted = targets.map((t) => ({
       date: new Date(t.targetDate).toISOString().split("T")[0],
       c1Target: t.c1Target,
       token: t.token,
     }));
 
-    // 🔹 If no data found for today, return default 0 & null
     if (formatted.length === 0 && !startDate && !endDate) {
       formatted.push({
         date: today.toISOString().split("T")[0],
@@ -235,22 +229,32 @@ var fetchC1Target = async function (req, res) {
       });
     }
 
-    // 🔹 Calculate total c1Target
     const totalC1Target = formatted.reduce((sum, t) => sum + (t.c1Target || 0), 0);
-
-    // 🔹 Calculate total token (sum numeric tokens only)
     const totalToken = formatted.reduce((sum, t) => {
       const num = parseFloat(t.token);
       return sum + (isNaN(num) ? 0 : num);
     }, 0);
 
-    // 🔹 Fetch achieved target from ASheet where meetingStatus includes "C1 Scheduled"
     const achievedCount = await model.ASheet.count({
       where: {
         userId,
-        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" }, // case-insensitive match
+        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
         dateOfConnect: { [Op.between]: [sDate, eDate] },
       },
+    });
+
+    // 🔹 Fetch counts for other statuses
+    const CNA = await model.ASheet.count({
+      where: { userId, meetingStatus: { [Op.iLike]: "%CNA%" }, dateOfConnect: { [Op.between]: [sDate, eDate] } },
+    });
+    const SwitchOff = await model.ASheet.count({
+      where: { userId, meetingStatus: { [Op.iLike]: "%Switch Off%" }, dateOfConnect: { [Op.between]: [sDate, eDate] } },
+    });
+    const NotInterested = await model.ASheet.count({
+      where: { userId, meetingStatus: { [Op.iLike]: "%Not Interested%" }, dateOfConnect: { [Op.between]: [sDate, eDate] } },
+    });
+    const WrongNumber = await model.ASheet.count({
+      where: { userId, meetingStatus: { [Op.iLike]: "%Wrong Number%" }, dateOfConnect: { [Op.between]: [sDate, eDate] } },
     });
 
     return ReS(res, {
@@ -259,8 +263,13 @@ var fetchC1Target = async function (req, res) {
       data: formatted,
       totalC1Target,
       totalToken,
-      achievedC1Target: achievedCount, // added field
+      achievedC1Target: achievedCount,
+      CNA,
+      SwitchOff,
+      NotInterested,
+      WrongNumber,
     }, 200);
+
   } catch (error) {
     console.error("fetchC1Target Error:", error);
     return ReE(res, error.message, 500);
@@ -268,6 +277,7 @@ var fetchC1Target = async function (req, res) {
 };
 
 module.exports.fetchC1Target = fetchC1Target;
+
 
 
 
