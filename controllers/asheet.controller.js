@@ -163,7 +163,7 @@ const getASheets = async (req, res) => {
     const records = await model.ASheet.findAll();
     const users = await model.User.findAll({
       where: { isActive: true },
-      attributes: ["id", "name", "email"],
+      attributes: ["id", "firstName", "lastName", "email"],
       order: [["name", "ASC"]],
     });
 
