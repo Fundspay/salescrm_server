@@ -320,18 +320,26 @@ const fetchFollowUpTarget = async (req, res) => {
     // 🔹 Count total Follow Up
     const totalFollowUp = followUpRows.length;
 
-    // 🔹 Fetch all registered users
-    const users = await model.User.findAll({
-      where: { isDeleted: false }, // only active users
-      attributes: ["id", "firstName", "lastName", "email", "name"],
+    // Fetch all registered users
+    const allUsers = await model.User.findAll({
+      where: { isDeleted: false },
+      attributes: ["id", "firstName", "lastName", "email"],
       raw: true,
     });
+
+    const allUsersWithName = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
 
     return ReS(res, {
       success: true,
       data: followUpRows,
       totalFollowUp,
-      users, // added list of users
+      users: allUsersWithName,
     }, 200);
 
   } catch (error) {
