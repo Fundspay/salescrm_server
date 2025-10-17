@@ -173,12 +173,17 @@ const getC1ScheduledByUser = async (req, res) => {
 
 module.exports.getC1ScheduledByUser = getC1ScheduledByUser;
 
-const getAllC2Scheduled = async (req, res) => {
+const getAllFollowUps = async (req, res) => {
   try {
-    // 🔹 Fetch all ASheet records where c1Status includes "C2 Scheduled"
+    // 🔹 Fetch all ASheet records where any of c1–c4 status includes "Follow Up"
     const aSheetData = await model.ASheet.findAll({
       where: {
-        c1Status: { [Op.iLike]: "%C2 Scheduled%" },
+        [Op.or]: [
+          { c1Status: { [Op.iLike]: "%Follow Up%" } },
+          { c2Status: { [Op.iLike]: "%Follow Up%" } },
+          { c3Status: { [Op.iLike]: "%Follow Up%" } },
+          { c4Status: { [Op.iLike]: "%Follow Up%" } },
+        ],
       },
       order: [["dateOfConnect", "ASC"]],
       raw: true,
@@ -226,12 +231,12 @@ const getAllC2Scheduled = async (req, res) => {
       data: aSheetData,
     });
   } catch (error) {
-    console.error("Get All C2 Scheduled Error:", error);
+    console.error("Get All Follow Ups Error:", error);
     return ReE(res, error.message, 500);
   }
 };
 
-module.exports.getAllC2Scheduled = getAllC2Scheduled;
+module.exports.getAllFollowUps = getAllFollowUps;
 
 const getAllC3Scheduled = async (req, res) => {
   try {
