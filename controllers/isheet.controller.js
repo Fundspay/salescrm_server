@@ -302,3 +302,68 @@ const getAllNotintrested = async (req, res) => {
 };
 
 module.exports.getAllNotintrested = getAllNotintrested;
+
+const getAllDicey = async (req, res) => {
+  try {
+    // 🔹 Fetch all ASheet records where any of c1–c4 status includes "Follow Up"
+    const aSheetData = await model.ASheet.findAll({
+      where: {
+        [Op.or]: [
+          { c1Status: { [Op.iLike]: "%Dicey%" } },
+          { c2Status: { [Op.iLike]: "%Dicey%" } },
+          { c3Status: { [Op.iLike]: "%Dicey%" } },
+          { c4Status: { [Op.iLike]: "%Dicey%" } },
+        ],
+      },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+      attributes: [
+        "id",
+        "sr",
+        "sourcedFrom",
+        "sourcedBy",
+        "dateOfConnect",
+        "businessName",
+        "contactPersonName",
+        "mobileNumber",
+        "address",
+        "email",
+        "businessSector",
+        "zone",
+        "landmark",
+        "existingWebsite",
+        "smmPresence",
+        "meetingStatus",
+        "userId",
+
+        // 🔹 C1–C4 tracking fields
+        "dateOfC1Connect",
+        "c1Status",
+        "c1Comment",
+        "dateOfC2Clarity",
+        "c2Status",
+        "c2Comment",
+        "dateOfC3Clarity",
+        "c3Status",
+        "c3Comment",
+        "dateOfC4Customer",
+        "c4Status",
+        "c4Comment",
+
+        "createdAt",
+        "updatedAt",
+      ],
+    });
+
+    return ReS(res, {
+      success: true,
+      totalRecords: aSheetData.length,
+      data: aSheetData,
+    });
+  } catch (error) {
+    console.error("Get All Follow Ups Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.getAllDicey = getAllDicey;

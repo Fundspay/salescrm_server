@@ -9,5 +9,6 @@ router.put("/update-followup/:id", isheetController.updateASheetFollowupFields);
 router.get("/c1-scheduled/:userId", isheetController.getC1ScheduledByUser);
 router.get("/follow-ups", isheetController.getAllFollowUps);
 router.get("/notintrested", isheetController.getAllNotintrested);
+router.get("/dicey", isheetController.getAllDicey);
 
 module.exports = router;
