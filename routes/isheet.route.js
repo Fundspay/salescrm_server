@@ -8,6 +8,6 @@ router.get("/analysis", isheetController.fetchC1ScheduledDetails);
 router.put("/update-followup/:id", isheetController.updateASheetFollowupFields);
 router.get("/c1-scheduled/:userId", isheetController.getC1ScheduledByUser);
 router.get("/follow-ups", isheetController.getAllFollowUps);
-router.get("/c2status", isheetController.getAllC3Scheduled);
+router.get("/notintrested", isheetController.getAllNotintrested);
 
 module.exports = router;
