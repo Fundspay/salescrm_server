@@ -172,3 +172,62 @@ const getC1ScheduledByUser = async (req, res) => {
 };
 
 module.exports.getC1ScheduledByUser = getC1ScheduledByUser;
+
+const getC2ScheduledData = async (req, res) => {
+  try {
+    // Fetch all ASheet records where c1Status has "C2 Scheduled"
+    const aSheetData = await model.ASheet.findAll({
+      where: {
+        c1Status: { [Op.iLike]: "%C2 Scheduled%" }
+      },
+      order: [["dateOfC1Connect", "ASC"]],
+      raw: true,
+      attributes: [
+        "id",
+        "sr",
+        "sourcedFrom",
+        "sourcedBy",
+        "dateOfConnect",
+        "businessName",
+        "contactPersonName",
+        "mobileNumber",
+        "address",
+        "email",
+        "businessSector",
+        "zone",
+        "landmark",
+        "existingWebsite",
+        "smmPresence",
+        "meetingStatus",
+        "userId",
+        // 🔹 New fields (C1 to C4 tracking)
+        "dateOfC1Connect",
+        "c1Status",
+        "c1Comment",
+        "dateOfC2Clarity",
+        "c2Status",
+        "c2Comment",
+        "dateOfC3Clarity",
+        "c3Status",
+        "c3Comment",
+        "dateOfC4Customer",
+        "c4Status",
+        "c4Comment",
+        "createdAt",
+        "updatedAt",
+      ],
+    });
+
+    return ReS(res, {
+      success: true,
+      totalRecords: aSheetData.length,
+      data: aSheetData,
+    }, 200);
+
+  } catch (error) {
+    console.error("Get C2 Scheduled Data Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.getC2ScheduledData = getC2ScheduledData;
