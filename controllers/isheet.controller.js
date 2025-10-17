@@ -232,3 +232,63 @@ const getAllC2Scheduled = async (req, res) => {
 };
 
 module.exports.getAllC2Scheduled = getAllC2Scheduled;
+
+const getAllC3Scheduled = async (req, res) => {
+  try {
+    // 🔹 Fetch all ASheet records where c1Status includes "C2 Scheduled"
+    const aSheetData = await model.ASheet.findAll({
+      where: {
+        c2Status: { [Op.iLike]: "%C3 Scheduled%" },
+      },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+      attributes: [
+        "id",
+        "sr",
+        "sourcedFrom",
+        "sourcedBy",
+        "dateOfConnect",
+        "businessName",
+        "contactPersonName",
+        "mobileNumber",
+        "address",
+        "email",
+        "businessSector",
+        "zone",
+        "landmark",
+        "existingWebsite",
+        "smmPresence",
+        "meetingStatus",
+        "userId",
+
+        // 🔹 C1–C4 tracking fields
+        "dateOfC1Connect",
+        "c1Status",
+        "c1Comment",
+        "dateOfC2Clarity",
+        "c2Status",
+        "c2Comment",
+        "dateOfC3Clarity",
+        "c3Status",
+        "c3Comment",
+        "dateOfC4Customer",
+        "c4Status",
+        "c4Comment",
+
+        "createdAt",
+        "updatedAt",
+      ],
+    });
+
+    return ReS(res, {
+      success: true,
+      totalRecords: aSheetData.length,
+      data: aSheetData,
+    });
+  } catch (error) {
+    console.error("Get All C3 Scheduled Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.getAllC3Scheduled = getAllC3Scheduled;
