@@ -7,6 +7,6 @@ const isheetController = require("../controllers/isheet.controller");
 router.get("/analysis", isheetController.fetchC1ScheduledDetails);
 router.put("/update-followup/:id", isheetController.updateASheetFollowupFields);
 router.get("/c1-scheduled/:userId", isheetController.getC1ScheduledByUser);
-router.get("/c1status", isheetController.getC2ScheduledISheetData);
+router.get("/c1status", isheetController.getAllC2Scheduled);
 
 module.exports = router;
