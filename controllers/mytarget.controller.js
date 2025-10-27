@@ -215,17 +215,39 @@ var fetchC1Target = async function (req, res) {
       order: [["targetDate", "ASC"]],
     });
 
-    const formatted = targets.map((t) => ({
-      date: new Date(t.targetDate).toISOString().split("T")[0],
-      c1Target: t.c1Target,
-      token: t.token,
-    }));
+    const formatted = await Promise.all(
+      targets.map(async (t) => {
+        const dateOnly = new Date(t.targetDate).toISOString().split("T")[0];
+
+        // 🔹 Count how many C1 Scheduled achieved on this date
+        const achieved = await model.ASheet.count({
+          where: {
+            userId,
+            meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
+            dateOfConnect: {
+              [Op.between]: [
+                new Date(`${dateOnly}T00:00:00.000Z`),
+                new Date(`${dateOnly}T23:59:59.999Z`),
+              ],
+            },
+          },
+        });
+
+        return {
+          date: dateOnly,
+          c1Target: t.c1Target,
+          token: t.token,
+          achieved, // 🔹 Newly added field
+        };
+      })
+    );
 
     if (formatted.length === 0 && !startDate && !endDate) {
       formatted.push({
         date: today.toISOString().split("T")[0],
         c1Target: 0,
         token: null,
+        achieved: 0, // 🔹 added here too for consistency
       });
     }
 
@@ -277,6 +299,7 @@ var fetchC1Target = async function (req, res) {
 };
 
 module.exports.fetchC1Target = fetchC1Target;
+
 
 
 
