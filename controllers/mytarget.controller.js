@@ -38,6 +38,7 @@ var handleTargets = async function (req, res) {
         c2Target: 0,
         c3Target: 0,
         c4Target: 0,
+        subscriptionTarget: 0,
         token: null,
       });
     }
@@ -45,7 +46,15 @@ var handleTargets = async function (req, res) {
     // 🔹 Upsert targets if provided
     if (targets && Array.isArray(targets)) {
       for (let t of targets) {
-        const { date, c1Target, c2Target, c3Target, c4Target, token } = t;
+        const {
+          date,
+          c1Target,
+          c2Target,
+          c3Target,
+          c4Target,
+          subscriptionTarget,
+          token,
+        } = t;
         const targetDate = new Date(date);
 
         const existing = await model.MyTarget.findOne({
@@ -57,6 +66,8 @@ var handleTargets = async function (req, res) {
           existing.c2Target = c2Target ?? existing.c2Target;
           existing.c3Target = c3Target ?? existing.c3Target;
           existing.c4Target = c4Target ?? existing.c4Target;
+          existing.subscriptionTarget =
+            subscriptionTarget ?? existing.subscriptionTarget;
           existing.token = token ?? existing.token;
           await existing.save();
         } else {
@@ -67,6 +78,7 @@ var handleTargets = async function (req, res) {
             c2Target: c2Target || 0,
             c3Target: c3Target || 0,
             c4Target: c4Target || 0,
+            subscriptionTarget: subscriptionTarget || 0,
             token: token || null,
           });
         }
@@ -92,6 +104,9 @@ var handleTargets = async function (req, res) {
         c2Target: found ? found.c2Target : d.c2Target,
         c3Target: found ? found.c3Target : d.c3Target,
         c4Target: found ? found.c4Target : d.c4Target,
+        subscriptionTarget: found
+          ? found.subscriptionTarget
+          : d.subscriptionTarget,
         token: found ? found.token : d.token,
       };
     });
@@ -102,6 +117,10 @@ var handleTargets = async function (req, res) {
       c2Target: merged.reduce((sum, t) => sum + t.c2Target, 0),
       c3Target: merged.reduce((sum, t) => sum + t.c3Target, 0),
       c4Target: merged.reduce((sum, t) => sum + t.c4Target, 0),
+      subscriptionTarget: merged.reduce(
+        (sum, t) => sum + t.subscriptionTarget,
+        0
+      ),
     };
 
     return ReS(res, { success: true, dates: merged, totals }, 200);
@@ -111,6 +130,7 @@ var handleTargets = async function (req, res) {
 };
 
 module.exports.handleTargets = handleTargets;
+
 
 // 🔹 Fetch targets (GET)
 var fetchTargets = async function (req, res) {
@@ -145,6 +165,7 @@ var fetchTargets = async function (req, res) {
         c2Target: 0,
         c3Target: 0,
         c4Target: 0,
+        subscriptionTarget: 0,
         token: null,
       });
     }
@@ -168,6 +189,9 @@ var fetchTargets = async function (req, res) {
         c2Target: found ? found.c2Target : d.c2Target,
         c3Target: found ? found.c3Target : d.c3Target,
         c4Target: found ? found.c4Target : d.c4Target,
+        subscriptionTarget: found
+          ? found.subscriptionTarget
+          : d.subscriptionTarget,
         token: found ? found.token : d.token,
       };
     });
@@ -178,6 +202,10 @@ var fetchTargets = async function (req, res) {
       c2Target: merged.reduce((sum, t) => sum + t.c2Target, 0),
       c3Target: merged.reduce((sum, t) => sum + t.c3Target, 0),
       c4Target: merged.reduce((sum, t) => sum + t.c4Target, 0),
+      subscriptionTarget: merged.reduce(
+        (sum, t) => sum + t.subscriptionTarget,
+        0
+      ),
     };
 
     return ReS(res, { success: true, dates: merged, totals }, 200);
