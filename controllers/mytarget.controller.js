@@ -292,6 +292,27 @@ var fetchC1Target = async function (req, res) {
         dateOfConnect: { [Op.between]: [sDate, eDate] },
       },
     });
+    const achievedc2Count = await model.ASheet.count({
+      where: {
+        userId,
+        c1Status: { [Op.iLike]: "%C2 Scheduled%" },
+        dateOfConnect: { [Op.between]: [sDate, eDate] },
+      },
+    });
+    const achievedc3Count = await model.ASheet.count({
+      where: {
+        userId,
+        c2Status: { [Op.iLike]: "%C3 Scheduled%" },
+        dateOfConnect: { [Op.between]: [sDate, eDate] },
+      },
+    });
+    const achievedc4Count = await model.ASheet.count({
+      where: {
+        userId,
+        c3Status: { [Op.iLike]: "%C4 Scheduled%" },
+        dateOfConnect: { [Op.between]: [sDate, eDate] },
+      },
+    });
 
     // 🔹 Fetch counts for other statuses
     const CNA = await model.ASheet.count({
@@ -306,7 +327,7 @@ var fetchC1Target = async function (req, res) {
     const WrongNumber = await model.ASheet.count({
       where: { userId, meetingStatus: { [Op.iLike]: "%Wrong Number%" }, dateOfConnect: { [Op.between]: [sDate, eDate] } },
     });
-
+    
     return ReS(res, {
       success: true,
       userId,
@@ -314,6 +335,9 @@ var fetchC1Target = async function (req, res) {
       totalC1Target,
       totalToken,
       achievedC1Target: achievedCount,
+      achievedC2Target: achievedc2Count,
+      achievedC3Target: achievedc3Count,
+      achievedC4Target: achievedc4Count,
       CNA,
       SwitchOff,
       NotInterested,
