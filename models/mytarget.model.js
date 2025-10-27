@@ -11,7 +11,6 @@ module.exports = (sequelize, Sequelize) => {
       c3Target: { type: Sequelize.INTEGER, allowNull: false, defaultValue: 0 },
       c4Target: { type: Sequelize.INTEGER, allowNull: false, defaultValue: 0 },
       subscriptionTarget: { type: Sequelize.INTEGER, allowNull: false, defaultValue: 0 },
-
       token: { type: Sequelize.STRING, allowNull: true },
 
       createdAt: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.NOW },

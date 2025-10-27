@@ -243,43 +243,76 @@ var fetchC1Target = async function (req, res) {
       order: [["targetDate", "ASC"]],
     });
 
-    const formatted = await Promise.all(
-      targets.map(async (t) => {
-        const dateOnly = new Date(t.targetDate).toISOString().split("T")[0];
+   const formatted = await Promise.all(
+  targets.map(async (t) => {
+    const dateOnly = new Date(t.targetDate).toISOString().split("T")[0];
 
-        // 🔹 Count how many C1 Scheduled achieved on this date
-        const achieved = await model.ASheet.count({
-          where: {
-            userId,
-            meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
-            dateOfConnect: {
-              [Op.between]: [
-                new Date(`${dateOnly}T00:00:00.000Z`),
-                new Date(`${dateOnly}T23:59:59.999Z`),
-              ],
-            },
-          },
-        });
+    // 🔹 Count how many C1 Scheduled achieved on this date
+    const achieved = await model.ASheet.count({
+      where: {
+        userId,
+        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
+        dateOfConnect: {
+          [Op.between]: [
+            new Date(`${dateOnly}T00:00:00.000Z`),
+            new Date(`${dateOnly}T23:59:59.999Z`),
+          ],
+        },
+      },
+    });
 
-        return {
-          date: dateOnly,
-          c1Target: t.c1Target,
-          token: t.token,
-          achieved, // 🔹 Newly added field
-        };
-      })
-    );
+    // 🔹 Count how many have non-empty c4Status (Gold, Premium, Standard etc.)
+    const achievedSubscription = await model.ASheet.count({
+      where: {
+        userId,
+        c4Status: { [Op.ne]: null },
+        [Op.and]: [
+          { c4Status: { [Op.ne]: "" } },
+          { c4Status: { [Op.notILike]: "%null%" } },
+        ],
+        dateOfConnect: {
+          [Op.between]: [
+            new Date(`${dateOnly}T00:00:00.000Z`),
+            new Date(`${dateOnly}T23:59:59.999Z`),
+          ],
+        },
+      },
+    });
 
-    if (formatted.length === 0 && !startDate && !endDate) {
-      formatted.push({
-        date: today.toISOString().split("T")[0],
-        c1Target: 0,
-        token: null,
-        achieved: 0, // 🔹 added here too for consistency
-      });
-    }
+    // 🔹 Total achieved target (sum of both)
+    const totalAchievedTarget = achieved + achievedSubscription;
+
+    return {
+      date: dateOnly,
+      c1Target: t.c1Target,
+      subscriptionTarget: t.subscriptionTarget, // newly added
+      token: t.token,
+      achieved,
+      achievedSubscription, // newly added
+      totalAchievedTarget,
+    };
+  })
+);
+
+// 🔹 Default entry when no data found
+if (formatted.length === 0 && !startDate && !endDate) {
+  formatted.push({
+    date: today.toISOString().split("T")[0],
+    c1Target: 0,
+    subscriptionTarget: 0,
+    token: null,
+    achieved: 0,
+    achievedSubscription: 0,
+    totalAchievedTarget: 0,
+  });
+}
+
 
     const totalC1Target = formatted.reduce((sum, t) => sum + (t.c1Target || 0), 0);
+    const totalC2Target = formatted.reduce((sum, t) => sum + (t.c2Target || 0), 0);
+    const totalC3Target = formatted.reduce((sum, t) => sum + (t.c3Target || 0), 0);
+    const totalC4Target = formatted.reduce((sum, t) => sum + (t.c4Target || 0), 0);
+    const totalsubscriptionTarget = formatted.reduce((sum, t) => sum + (t.subscriptionTarget || 0), 0);
     const totalToken = formatted.reduce((sum, t) => {
       const num = parseFloat(t.token);
       return sum + (isNaN(num) ? 0 : num);
@@ -313,6 +346,17 @@ var fetchC1Target = async function (req, res) {
         dateOfConnect: { [Op.between]: [sDate, eDate] },
       },
     });
+    const achievedsubscriptionCount = await model.ASheet.count({
+  where: {
+    userId,
+    c4Status: {
+      [Op.ne]: null,         // Not null
+      [Op.ne]: '',           // Not empty string
+    },
+    dateOfConnect: { [Op.between]: [sDate, eDate] },
+  },
+});
+
 
     // 🔹 Fetch counts for other statuses
     const CNA = await model.ASheet.count({
@@ -333,11 +377,16 @@ var fetchC1Target = async function (req, res) {
       userId,
       data: formatted,
       totalC1Target,
+      totalC2Target,
+      totalC3Target,
+      totalC4Target,
+      totalsubscriptionTarget,
       totalToken,
       achievedC1Target: achievedCount,
       achievedC2Target: achievedc2Count,
       achievedC3Target: achievedc3Count,
       achievedC4Target: achievedc4Count,
+      achievedSubscriptionTarget: achievedsubscriptionCount,
       CNA,
       SwitchOff,
       NotInterested,
