@@ -382,7 +382,7 @@ var fetchSubscriptionDetails = async function (req, res) {
           ],
         },
       },
-      attributes: ["id", "email", "phoneNumber", "c4Status"], // fetch only required fields
+      attributes: ["id", "email", "mobileNumber", "c4Status"], // ✅ updated field
     });
 
     if (rows.length === 0) {
@@ -394,7 +394,7 @@ var fetchSubscriptionDetails = async function (req, res) {
     // Step 2: Iterate and fetch data from fundsweb
     for (const row of rows) {
       const email = row.email || "";
-      const phoneNumber = row.phoneNumber || "";
+      const phoneNumber = row.mobileNumber || ""; // ✅ use mobileNumber as phoneNumber
 
       // Construct dynamic URL based on availability
       const apiUrl = `https://api.fundsweb.in/api/v1/userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
@@ -406,7 +406,7 @@ var fetchSubscriptionDetails = async function (req, res) {
           results.push({
             id: row.id,
             email,
-            phoneNumber,
+            phoneNumber, // ✅ still passing it as phoneNumber
             c4Status: row.c4Status,
             subscriptionDetails: response.data.data, // domain, startDate, endDate, etc.
           });
