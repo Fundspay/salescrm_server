@@ -288,6 +288,9 @@ var fetchC1Target = async function (req, res) {
         return {
           date: new Date(t.targetDate).toISOString().split("T")[0],
           c1Target: t.c1Target,
+          c2Target: t.c2Target, 
+          c3Target: t.c3Target, 
+          c4Target: t.c4Target, 
           subscriptionTarget: t.subscriptionTarget || 0,
           token: t.token,
           achieved,
@@ -301,6 +304,9 @@ var fetchC1Target = async function (req, res) {
       formatted.push({
         date: today.toISOString().split("T")[0],
         c1Target: 0,
+        c2Target: 0,
+        c3Target: 0,
+        c4Target: 0,
         subscriptionTarget: 0,
         token: null,
         achieved: 0,
@@ -424,6 +430,7 @@ var fetchC1Target = async function (req, res) {
 };
 
 module.exports.fetchC1Target = fetchC1Target;
+
 
 
 
