@@ -2,6 +2,7 @@
 const model = require("../models/index");
 const { ReE, ReS } = require("../utils/util.service.js");
 const { Op, Sequelize } = require("sequelize");
+const axios = require("axios");
 
 const fetchC1ScheduledDetails = async (req, res) => {
   try {
@@ -367,3 +368,73 @@ const getAllDicey = async (req, res) => {
 };
 
 module.exports.getAllDicey = getAllDicey;
+
+var fetchSubscriptionDetails = async function (req, res) {
+  try {
+    // Step 1: Get all rows where c4Status has data
+    const rows = await model.ASheet.findAll({
+      where: {
+        c4Status: {
+          [Op.and]: [
+            { [Op.ne]: null },
+            { [Op.ne]: "" },
+            { [Op.notILike]: "%null%" },
+          ],
+        },
+      },
+      attributes: ["id", "email", "phoneNumber", "c4Status"], // fetch only required fields
+    });
+
+    if (rows.length === 0) {
+      return ReS(res, { success: true, message: "No users found with valid c4Status." }, 200);
+    }
+
+    const results = [];
+
+    // Step 2: Iterate and fetch data from fundsweb
+    for (const row of rows) {
+      const email = row.email || "";
+      const phoneNumber = row.phoneNumber || "";
+
+      // Construct dynamic URL based on availability
+      const apiUrl = `https://api.fundsweb.in/api/v1/userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
+
+      try {
+        const response = await axios.get(apiUrl);
+
+        if (response.data && response.data.success && response.data.data) {
+          results.push({
+            id: row.id,
+            email,
+            phoneNumber,
+            c4Status: row.c4Status,
+            subscriptionDetails: response.data.data, // domain, startDate, endDate, etc.
+          });
+        } else {
+          results.push({
+            id: row.id,
+            email,
+            phoneNumber,
+            c4Status: row.c4Status,
+            message: "No domain found for this user",
+          });
+        }
+      } catch (err) {
+        results.push({
+          id: row.id,
+          email,
+          phoneNumber,
+          c4Status: row.c4Status,
+          message: "No domain found for this user",
+        });
+      }
+    }
+
+    return ReS(res, { success: true, total: results.length, data: results }, 200);
+  } catch (error) {
+    console.error("fetchSubscriptionDetails Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.fetchSubscriptionDetails = fetchSubscriptionDetails;
