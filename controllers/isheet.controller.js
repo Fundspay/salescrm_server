@@ -371,7 +371,7 @@ module.exports.getAllDicey = getAllDicey;
 
 var fetchSubscriptionDetails = async function (req, res) {
   try {
-    // Step 1: Fetch all ASheet rows where c4Status has some data
+    // Step 1: Fetch all ASheet rows where c4Status has data
     const rows = await model.ASheet.findAll({
       where: {
         c4Status: {
@@ -382,7 +382,7 @@ var fetchSubscriptionDetails = async function (req, res) {
           ],
         },
       },
-      attributes: ["id", "email", "mobileNumber", "c4Status"], // ✅ using mobileNumber
+      attributes: ["id", "email", "mobileNumber", "c4Status"], // ✅ use mobileNumber instead of phoneNumber
     });
 
     if (rows.length === 0) {
@@ -391,29 +391,37 @@ var fetchSubscriptionDetails = async function (req, res) {
 
     const results = [];
 
-    // Step 2: For each ASheet record, fetch data from FundsWeb API
+    // Step 2: For each ASheet record, call FundsWeb API
     for (const row of rows) {
-      const email = row.email || "";
-      const phoneNumber = row.mobileNumber || "";
+      const email = row.email?.trim() || "";
+      const phoneNumber = row.mobileNumber?.trim() || "";
 
-      //  Construct correct URL depending on availability
-      let apiUrl = "https://api.fundsweb.in/api/v1/userdomain/fetch";
-      if (email && phoneNumber) apiUrl += `/${email}/${phoneNumber}`;
-      else if (email) apiUrl += `/${email}`;
-      else if (phoneNumber) apiUrl += `/${phoneNumber}`;
-      else apiUrl += `/null`;
+      // ✅ Ensure both are present before calling FundsWeb
+      if (!email && !phoneNumber) {
+        results.push({
+          id: row.id,
+          email,
+          phoneNumber,
+          c4Status: row.c4Status,
+          message: "Missing both email and phone number, cannot fetch domain",
+        });
+        continue;
+      }
+
+      // ✅ Construct URL exactly as required (note the double slash after v1)
+      const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
 
       try {
         const response = await axios.get(apiUrl);
 
-        if (response.data?.success && response.data?.data) {
-          //  Attach full FundsWeb data as-is
+        if (response.data && response.data.success) {
+          // ✅ Attach entire data as-is
           results.push({
             id: row.id,
             email,
             phoneNumber,
             c4Status: row.c4Status,
-            fundsWebData: response.data, // full response from FundsWeb
+            fundsWebData: response.data, // Full API response
           });
         } else {
           results.push({
@@ -435,7 +443,7 @@ var fetchSubscriptionDetails = async function (req, res) {
       }
     }
 
-    //  Return final data
+    // ✅ Send back all results
     return ReS(res, { success: true, total: results.length, data: results }, 200);
   } catch (error) {
     console.error("fetchSubscriptionDetails Error:", error);
