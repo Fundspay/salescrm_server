@@ -371,7 +371,7 @@ module.exports.getAllDicey = getAllDicey;
 
 var fetchSubscriptionDetails = async function (req, res) {
   try {
-    // Step 1: Get all rows where c4Status has data
+    // Step 1: Fetch all ASheet rows where c4Status has some data
     const rows = await model.ASheet.findAll({
       where: {
         c4Status: {
@@ -382,7 +382,7 @@ var fetchSubscriptionDetails = async function (req, res) {
           ],
         },
       },
-      attributes: ["id", "email", "mobileNumber", "c4Status"], // ✅ updated field
+      attributes: ["id", "email", "mobileNumber", "c4Status"], // ✅ using mobileNumber
     });
 
     if (rows.length === 0) {
@@ -391,24 +391,29 @@ var fetchSubscriptionDetails = async function (req, res) {
 
     const results = [];
 
-    // Step 2: Iterate and fetch data from fundsweb
+    // Step 2: For each ASheet record, fetch data from FundsWeb API
     for (const row of rows) {
       const email = row.email || "";
-      const phoneNumber = row.mobileNumber || ""; // ✅ use mobileNumber as phoneNumber
+      const phoneNumber = row.mobileNumber || "";
 
-      // Construct dynamic URL based on availability
-      const apiUrl = `https://api.fundsweb.in/api/v1/userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
+      //  Construct correct URL depending on availability
+      let apiUrl = "https://api.fundsweb.in/api/v1/userdomain/fetch";
+      if (email && phoneNumber) apiUrl += `/${email}/${phoneNumber}`;
+      else if (email) apiUrl += `/${email}`;
+      else if (phoneNumber) apiUrl += `/${phoneNumber}`;
+      else apiUrl += `/null`;
 
       try {
         const response = await axios.get(apiUrl);
 
-        if (response.data && response.data.success && response.data.data) {
+        if (response.data?.success && response.data?.data) {
+          //  Attach full FundsWeb data as-is
           results.push({
             id: row.id,
             email,
-            phoneNumber, // ✅ still passing it as phoneNumber
+            phoneNumber,
             c4Status: row.c4Status,
-            subscriptionDetails: response.data.data, // domain, startDate, endDate, etc.
+            fundsWebData: response.data, // full response from FundsWeb
           });
         } else {
           results.push({
@@ -430,6 +435,7 @@ var fetchSubscriptionDetails = async function (req, res) {
       }
     }
 
+    //  Return final data
     return ReS(res, { success: true, total: results.length, data: results }, 200);
   } catch (error) {
     console.error("fetchSubscriptionDetails Error:", error);
