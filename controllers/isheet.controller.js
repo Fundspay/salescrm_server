@@ -382,7 +382,8 @@ var fetchSubscriptionDetails = async function (req, res) {
           ],
         },
       },
-      attributes: ["id", "email", "mobileNumber", "c4Status"], //  use mobileNumber instead of phoneNumber
+      //  Fetch the entire row instead of selected columns
+      attributes: { exclude: [] },
     });
 
     if (rows.length === 0) {
@@ -403,16 +404,13 @@ var fetchSubscriptionDetails = async function (req, res) {
       //  Ensure both are present before calling FundsWeb
       if (!email && !phoneNumber) {
         results.push({
-          id: row.id,
-          email,
-          phoneNumber,
-          c4Status: row.c4Status,
+          rowData: row, // include full row
           message: "Missing both email and phone number, cannot fetch domain",
         });
         continue;
       }
 
-      //  Construct URL exactly as required (note the double slash after v1)
+      // Construct URL exactly as required (note the double slash after v1)
       const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
 
       try {
@@ -433,29 +431,21 @@ var fetchSubscriptionDetails = async function (req, res) {
               : null;
 
           results.push({
-            id: row.id,
-            email,
-            phoneNumber,
-            c4Status: row.c4Status,
-            fundsWebData: domainInfo || {
-              message: "No domain or user data found in FundsWeb response",
-            },
+            rowData: row, //  full row instead of email/phone
+            fundsWebData:
+              domainInfo || {
+                message: "No domain or user data found in FundsWeb response",
+              },
           });
         } else {
           results.push({
-            id: row.id,
-            email,
-            phoneNumber,
-            c4Status: row.c4Status,
+            rowData: row,
             message: "No domain found for this user",
           });
         }
       } catch (err) {
         results.push({
-          id: row.id,
-          email,
-          phoneNumber,
-          c4Status: row.c4Status,
+          rowData: row,
           message: "No domain found for this user",
         });
       }
@@ -470,4 +460,5 @@ var fetchSubscriptionDetails = async function (req, res) {
 };
 
 module.exports.fetchSubscriptionDetails = fetchSubscriptionDetails;
+
 
