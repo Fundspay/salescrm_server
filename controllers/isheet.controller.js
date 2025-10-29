@@ -382,11 +382,15 @@ var fetchSubscriptionDetails = async function (req, res) {
           ],
         },
       },
-      attributes: ["id", "email", "mobileNumber", "c4Status"], // ✅ use mobileNumber instead of phoneNumber
+      attributes: ["id", "email", "mobileNumber", "c4Status"], //  use mobileNumber instead of phoneNumber
     });
 
     if (rows.length === 0) {
-      return ReS(res, { success: true, message: "No users found with valid c4Status." }, 200);
+      return ReS(
+        res,
+        { success: true, message: "No users found with valid c4Status." },
+        200
+      );
     }
 
     const results = [];
@@ -396,7 +400,7 @@ var fetchSubscriptionDetails = async function (req, res) {
       const email = row.email?.trim() || "";
       const phoneNumber = row.mobileNumber?.trim() || "";
 
-      // ✅ Ensure both are present before calling FundsWeb
+      //  Ensure both are present before calling FundsWeb
       if (!email && !phoneNumber) {
         results.push({
           id: row.id,
@@ -408,20 +412,34 @@ var fetchSubscriptionDetails = async function (req, res) {
         continue;
       }
 
-      // ✅ Construct URL exactly as required (note the double slash after v1)
+      //  Construct URL exactly as required (note the double slash after v1)
       const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
 
       try {
         const response = await axios.get(apiUrl);
 
         if (response.data && response.data.success) {
-          // ✅ Attach entire data as-is
+          const fundsData = response.data;
+
+          //  Extract only needed fields
+          const domainInfo =
+            fundsData.Domain && fundsData.User
+              ? {
+                  domainName: fundsData.Domain.name || null,
+                  userName: fundsData.User.name || null,
+                  domainCreatedAt: fundsData.Domain.createdAt || null,
+                  domainUpdatedAt: fundsData.Domain.updatedAt || null,
+                }
+              : null;
+
           results.push({
             id: row.id,
             email,
             phoneNumber,
             c4Status: row.c4Status,
-            fundsWebData: response.data, // Full API response
+            fundsWebData: domainInfo || {
+              message: "No domain or user data found in FundsWeb response",
+            },
           });
         } else {
           results.push({
@@ -443,7 +461,7 @@ var fetchSubscriptionDetails = async function (req, res) {
       }
     }
 
-    // ✅ Send back all results
+    //  Send back all results
     return ReS(res, { success: true, total: results.length, data: results }, 200);
   } catch (error) {
     console.error("fetchSubscriptionDetails Error:", error);
@@ -452,3 +470,4 @@ var fetchSubscriptionDetails = async function (req, res) {
 };
 
 module.exports.fetchSubscriptionDetails = fetchSubscriptionDetails;
+
