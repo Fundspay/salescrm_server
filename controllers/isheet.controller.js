@@ -452,7 +452,7 @@ var fetchSubscriptionDetails = async function (req, res) {
     }
 
     //  Step 3: Fetch all registered users and format them
-    const allUsers = await model.Users.findAll({
+    const allUsers = await model.User.findAll({
       attributes: [
         "id",
         "firstName",
@@ -467,7 +467,7 @@ var fetchSubscriptionDetails = async function (req, res) {
       firstName: u.firstName,
       lastName: u.lastName,
       email: u.email,
-      mobileNumber: u.phoneNumberNumber, //  added
+      mobileNumber: u.phoneNumber, //  added
       name: `${u.firstName} ${u.lastName}`.trim(),
     }));
 
