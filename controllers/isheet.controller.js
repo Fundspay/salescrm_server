@@ -458,7 +458,7 @@ var fetchSubscriptionDetails = async function (req, res) {
         "firstName",
         "lastName",
         "email",
-        "mobileNumber", //  added
+        "phoneNumber", //  added
       ],
     });
 
@@ -467,7 +467,7 @@ var fetchSubscriptionDetails = async function (req, res) {
       firstName: u.firstName,
       lastName: u.lastName,
       email: u.email,
-      mobileNumber: u.mobileNumber, //  added
+      mobileNumber: u.phoneNumberNumber, //  added
       name: `${u.firstName} ${u.lastName}`.trim(),
     }));
 
