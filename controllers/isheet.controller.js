@@ -451,8 +451,32 @@ var fetchSubscriptionDetails = async function (req, res) {
       }
     }
 
+    //  Step 3: Fetch all registered users and format them
+    const allUsers = await model.Users.findAll({
+      attributes: [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "mobileNumber", //  added
+      ],
+    });
+
+    const users = allUsers.map((u) => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      mobileNumber: u.mobileNumber, //  added
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
     //  Send back all results
-    return ReS(res, { success: true, total: results.length, data: results }, 200);
+    return ReS(
+      res,
+      { success: true, total: results.length, data: results, users },
+      200
+    );
   } catch (error) {
     console.error("fetchSubscriptionDetails Error:", error);
     return ReE(res, error.message, 500);
@@ -460,5 +484,6 @@ var fetchSubscriptionDetails = async function (req, res) {
 };
 
 module.exports.fetchSubscriptionDetails = fetchSubscriptionDetails;
+
 
 
