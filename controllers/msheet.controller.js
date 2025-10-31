@@ -62,3 +62,65 @@ const upsertMSheet = async (req, res) => {
 };
 
 module.exports.upsertMSheet = upsertMSheet;
+
+"use strict";
+const model = require("../models/index");
+const { ReE, ReS } = require("../utils/util.service.js");
+
+// ✅ Fetch Single MSheet by ID
+var fetchMSheetById = async (req, res) => {
+    try {
+        const msheet = await model.MSheet.findByPk(req.params.id, {
+            include: [
+                { model: model.ASheet } // include parent sheet info
+            ]
+        });
+
+        if (!msheet || !msheet.isActive) return ReE(res, "MSheet not found", 404);
+
+        return ReS(res, { success: true, msheet: msheet.get({ plain: true }) }, 200);
+
+    } catch (error) {
+        return ReE(res, error.message, 500);
+    }
+};
+module.exports.fetchMSheetById = fetchMSheetById;
+
+// ✅ Fetch MSheets by User ID (assuming ASheet has userId)
+var fetchMSheetsByUserId = async (req, res) => {
+    try {
+        const msheets = await model.MSheet.findAll({
+            include: [
+                {
+                    model: model.ASheet,
+                    where: { userId: req.params.userId },
+                    required: true
+                }
+            ]
+        });
+
+        return ReS(res, { success: true, msheets }, 200);
+
+    } catch (error) {
+        return ReE(res, error.message, 500);
+    }
+};
+module.exports.fetchMSheetsByUserId = fetchMSheetsByUserId;
+
+// ✅ Fetch All MSheets
+var fetchAllMSheets = async (req, res) => {
+    try {
+        const msheets = await model.MSheet.findAll({
+            include: [
+                { model: model.ASheet }
+            ]
+        });
+
+        return ReS(res, { success: true, msheets }, 200);
+
+    } catch (error) {
+        return ReE(res, error.message, 500);
+    }
+};
+module.exports.fetchAllMSheets = fetchAllMSheets;
+
