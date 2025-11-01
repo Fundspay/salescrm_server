@@ -63,10 +63,6 @@ const upsertMSheet = async (req, res) => {
 
 module.exports.upsertMSheet = upsertMSheet;
 
-"use strict";
-const model = require("../models/index");
-const { ReE, ReS } = require("../utils/util.service.js");
-
 // ✅ Fetch Single MSheet by ID
 var fetchMSheetById = async (req, res) => {
     try {
