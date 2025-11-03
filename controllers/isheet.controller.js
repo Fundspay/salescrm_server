@@ -370,6 +370,7 @@ const getAllDicey = async (req, res) => {
 
 module.exports.getAllDicey = getAllDicey;
 
+
 const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
   try {
     // ----------------------------
@@ -389,6 +390,7 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
         {
           model: model.MSheet,
           required: false, // include even if MSheet is null
+          as: "MSheet",    // must match the alias defined in ASheet model
         },
       ],
     });
@@ -413,7 +415,7 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
         try {
           const response = await axios.get(apiUrl, { timeout: 5000 });
           return {
-            rowData: row, // includes ASheet + MSheet data
+            rowData: row,             // ASheet + MSheet data included
             fundsWebData: response.data, // full API response
           };
         } catch (err) {
@@ -450,7 +452,8 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
       include: [
         {
           model: model.MSheet,
-          required: false, // include even if null
+          required: false, // include even if MSheet is null
+          as: "MSheet",    // must match the alias
         },
       ],
       order: [["dateOfConnect", "ASC"]],
@@ -464,7 +467,7 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
       {
         success: true,
         totalC4Users: subscriptionResults.length,
-        data: subscriptionResults,
+        subscriptionData: subscriptionResults,
         users,
         totalC1Scheduled: c1ScheduledRows.length,
         c1ScheduledData: c1ScheduledRows,
