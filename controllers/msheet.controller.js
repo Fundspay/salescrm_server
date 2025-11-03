@@ -23,9 +23,6 @@ const upsertMSheet = async (req, res) => {
       return ReE(res, "aSheetId is required.", 400);
     }
 
-    // Find existing record by aSheetId
-    const existing = await model.MSheet.findOne({ where: { aSheetId } });
-
     // Prepare data (any missing field = null)
     const data = {
       aSheetId,
@@ -41,20 +38,16 @@ const upsertMSheet = async (req, res) => {
       renewalStatus: renewalStatus || null,
     };
 
-    let result, message;
+    // Use upsert for atomic create/update
+    const [result, created] = await model.MSheet.upsert(data, { returning: true });
 
-    if (existing) {
-      // Update existing record
-      await existing.update(data);
-      result = existing;
-      message = "MSheet record updated successfully.";
-    } else {
-      // Create new record
-      result = await model.MSheet.create(data);
-      message = "MSheet record created successfully.";
-    }
-
-    return ReS(res, { success: true, message, data: result }, 200);
+    return ReS(res, {
+      success: true,
+      message: created
+        ? "MSheet record created successfully."
+        : "MSheet record updated successfully.",
+      data: result, // latest MSheet row
+    }, 200);
   } catch (error) {
     console.error("upsertMSheet Error:", error);
     return ReE(res, error.message, 500);
