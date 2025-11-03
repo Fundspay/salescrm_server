@@ -370,9 +370,11 @@ const getAllDicey = async (req, res) => {
 
 module.exports.getAllDicey = getAllDicey;
 
-const fetchSubscriptionWithMSheetAndFundsWeb = async (req, res) => {
+const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
   try {
+    // ----------------------------
     // Step 1: Fetch all ASheet rows where c4Status has data
+    // ----------------------------
     const rows = await model.ASheet.findAll({
       where: {
         c4Status: {
@@ -386,42 +388,45 @@ const fetchSubscriptionWithMSheetAndFundsWeb = async (req, res) => {
       include: [
         {
           model: model.MSheet,
-          required: false,
-          as: "MSheet", // must match association alias
+          required: false, // include even if MSheet is null
         },
       ],
     });
 
-    const combinedResults = await Promise.all(
-      rows.map(async (row) => {
-        const rowJSON = row.toJSON();
+    const subscriptionResults = [];
 
-        // Step 2: Fetch FundsWeb data per row
-        const email = rowJSON.email?.trim() || "";
-        const phoneNumber = rowJSON.mobileNumber?.trim() || "";
-        let fundsWebData = null;
+    if (rows.length > 0) {
+      // Step 2: Map each row to a promise for FundsWeb API call
+      const promises = rows.map(async (row) => {
+        const email = row.email?.trim() || "";
+        const phoneNumber = row.mobileNumber?.trim() || "";
 
-        if (email || phoneNumber) {
-          const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
-          try {
-            const response = await axios.get(apiUrl, { timeout: 5000 });
-            fundsWebData = response.data; // include full API response
-          } catch (err) {
-            fundsWebData = { message: "Failed to fetch external API data" };
-          }
-        } else {
-          fundsWebData = { message: "Missing email and phone number" };
+        if (!email && !phoneNumber) {
+          return {
+            rowData: row,
+            message: "Missing both email and phone number, cannot fetch domain",
+          };
         }
 
-        // Combine ASheet + MSheet + FundsWeb inside one object
-        return {
-          ...rowJSON,
-          fundsWebData, // separate field inside the same object
-        };
-      })
-    );
+        const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
 
-    // Step 3: Fetch all users
+        try {
+          const response = await axios.get(apiUrl, { timeout: 5000 });
+          return {
+            rowData: row, // includes ASheet + MSheet data
+            fundsWebData: response.data, // full API response
+          };
+        } catch (err) {
+          return { rowData: row, message: "Failed to fetch external API data" };
+        }
+      });
+
+      subscriptionResults.push(...(await Promise.all(promises)));
+    }
+
+    // ----------------------------
+    // Step 3: Fetch all registered users
+    // ----------------------------
     const allUsers = await model.User.findAll({
       attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
     });
@@ -435,21 +440,41 @@ const fetchSubscriptionWithMSheetAndFundsWeb = async (req, res) => {
       name: `${u.firstName} ${u.lastName}`.trim(),
     }));
 
-    // Step 4: Return combined results
+    // ----------------------------
+    // Step 4: Fetch all ASheet rows where meetingStatus contains "C1 Scheduled"
+    // ----------------------------
+    const c1ScheduledRows = await model.ASheet.findAll({
+      where: {
+        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
+      },
+      include: [
+        {
+          model: model.MSheet,
+          required: false, // include even if null
+        },
+      ],
+      order: [["dateOfConnect", "ASC"]],
+    });
+
+    // ----------------------------
+    // Step 5: Return combined response
+    // ----------------------------
     return ReS(
       res,
       {
         success: true,
-        total: combinedResults.length,
-        data: combinedResults,
+        totalC4Users: subscriptionResults.length,
+        data: subscriptionResults,
         users,
+        totalC1Scheduled: c1ScheduledRows.length,
+        c1ScheduledData: c1ScheduledRows,
       },
       200
     );
   } catch (error) {
-    console.error("fetchSubscriptionWithMSheetAndFundsWeb Error:", error);
+    console.error("fetchSubscriptionC1AndMSheetDetails Error:", error);
     return ReE(res, error.message, 500);
   }
 };
 
-module.exports.fetchSubscriptionWithMSheetAndFundsWeb = fetchSubscriptionWithMSheetAndFundsWeb;
+module.exports.fetchSubscriptionC1AndMSheetDetails = fetchSubscriptionC1AndMSheetDetails;
