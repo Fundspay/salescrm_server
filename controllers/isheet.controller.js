@@ -370,7 +370,7 @@ const getAllDicey = async (req, res) => {
 
 module.exports.getAllDicey = getAllDicey;
 
-const fetchSubscriptionAndC1Details = async (req, res) => {
+const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
   try {
     // ----------------------------
     // Step 1: Fetch all ASheet rows where c4Status has data
@@ -385,7 +385,12 @@ const fetchSubscriptionAndC1Details = async (req, res) => {
           ],
         },
       },
-      attributes: { exclude: [] },
+      include: [
+        {
+          model: model.MSheet,
+          required: false, // include even if MSheet is null
+        },
+      ],
     });
 
     const subscriptionResults = [];
@@ -407,17 +412,15 @@ const fetchSubscriptionAndC1Details = async (req, res) => {
 
         try {
           const response = await axios.get(apiUrl, { timeout: 5000 });
-          // Include full API response without filtering
           return {
-            rowData: row,
-            fundsWebData: response.data,
+            rowData: row, // includes ASheet + MSheet data
+            fundsWebData: response.data, // full API response
           };
         } catch (err) {
           return { rowData: row, message: "Failed to fetch external API data" };
         }
       });
 
-      // Wait for all API calls concurrently
       subscriptionResults.push(...(await Promise.all(promises)));
     }
 
@@ -444,8 +447,13 @@ const fetchSubscriptionAndC1Details = async (req, res) => {
       where: {
         meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
       },
+      include: [
+        {
+          model: model.MSheet,
+          required: false, // include even if null
+        },
+      ],
       order: [["dateOfConnect", "ASC"]],
-      raw: true,
     });
 
     // ----------------------------
@@ -456,7 +464,7 @@ const fetchSubscriptionAndC1Details = async (req, res) => {
       {
         success: true,
         totalC4Users: subscriptionResults.length,
-        data: subscriptionResults, // full API response included
+        data: subscriptionResults,
         users,
         totalC1Scheduled: c1ScheduledRows.length,
         c1ScheduledData: c1ScheduledRows,
@@ -464,9 +472,9 @@ const fetchSubscriptionAndC1Details = async (req, res) => {
       200
     );
   } catch (error) {
-    console.error("fetchSubscriptionAndC1Details Error:", error);
+    console.error("fetchSubscriptionC1AndMSheetDetails Error:", error);
     return ReE(res, error.message, 500);
   }
 };
 
-module.exports.fetchSubscriptionAndC1Details = fetchSubscriptionAndC1Details;
+module.exports.fetchSubscriptionC1AndMSheetDetails = fetchSubscriptionC1AndMSheetDetails;
