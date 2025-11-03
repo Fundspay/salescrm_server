@@ -373,24 +373,29 @@ module.exports.getAllDicey = getAllDicey;
 
 const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
   try {
-    // Step 1: Fetch ASheet rows with c4Status
+    // Step 1: Fetch ASheet rows where c4Status has valid data
     const rows = await model.ASheet.findAll({
       where: {
-        c4Status: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: "" }, { [Op.notILike]: "%null%" }] },
+        c4Status: {
+          [Op.and]: [
+            { [Op.ne]: null },
+            { [Op.ne]: "" },
+            { [Op.notILike]: "%null%" }, // excludes literal string 'null'
+          ],
+        },
       },
       include: [{ model: model.MSheet, required: false, as: "MSheet" }],
     });
 
-    // Step 2: Fetch external API data per row
+    // Step 2: Fetch external API data for each ASheet
     const combinedResults = await Promise.all(
       rows.map(async (row) => {
         const email = row.email?.trim() || "";
         const phoneNumber = row.mobileNumber?.trim() || "";
-
         let fundsWebData = null;
 
         if (email || phoneNumber) {
-          const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
+          const apiUrl = `https://api.fundsweb.in/api/v1/userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
           try {
             const response = await axios.get(apiUrl, { timeout: 5000 });
             fundsWebData = response.data;
@@ -401,14 +406,16 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
           fundsWebData = { message: "Missing email and phone number" };
         }
 
+        // Return ASheet + MSheet + fundsWebData
         return { ...row.toJSON(), fundsWebData };
       })
     );
 
-    // Step 3: Fetch all registered users
+    // Step 3: Fetch all users (for mapping)
     const allUsers = await model.User.findAll({
       attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
     });
+
     const users = allUsers.map((u) => ({
       id: u.id,
       firstName: u.firstName,
@@ -418,19 +425,36 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
       name: `${u.firstName} ${u.lastName}`.trim(),
     }));
 
-    // Step 4: Fetch C1 Scheduled rows with MSheet
+    // Step 4: Fetch C1 Scheduled rows
     const c1ScheduledRows = await model.ASheet.findAll({
       where: { meetingStatus: { [Op.iLike]: "%C1 Scheduled%" } },
       include: [{ model: model.MSheet, required: false, as: "MSheet" }],
       order: [["dateOfConnect", "ASC"]],
     });
 
-    // Step 5: Combine without duplicates
+    // Step 5: Merge arrays without duplicates
     const existingIds = new Set(combinedResults.map((r) => r.id));
-    const c1Filtered = c1ScheduledRows.filter((r) => !existingIds.has(r.id)).map((r) => r.toJSON());
+    const c1Filtered = c1ScheduledRows
+      .filter((r) => !existingIds.has(r.id))
+      .map((r) => r.toJSON());
+
     const finalArray = [...combinedResults, ...c1Filtered];
 
-    return ReS(res, { success: true, total: finalArray.length, data: finalArray, users }, 200);
+    // ✅ Step 6: Filter out rows with null, empty, or 'null' c4Status (extra safety)
+    const cleanedArray = finalArray.filter(
+      (item) =>
+        item.c4Status &&
+        item.c4Status.trim() !== "" &&
+        item.c4Status.trim().toLowerCase() !== "null"
+    );
+
+    // ✅ Step 7: Return clean data
+    return ReS(res, {
+      success: true,
+      total: cleanedArray.length,
+      data: cleanedArray,
+      users,
+    }, 200);
   } catch (error) {
     console.error("fetchSubscriptionC1AndMSheetDetails Error:", error);
     return ReE(res, error.message, 500);
