@@ -52,12 +52,20 @@ module.exports = (sequelize, Sequelize) => {
     }
   );
 
-  // 🔹 Association: ASheet belongs to User
+  // 🔹 Associations
   ASheet.associate = function (models) {
+    // ASheet belongs to User
     ASheet.belongsTo(models.User, {
       foreignKey: "userId",
       onDelete: "SET NULL",
       onUpdate: "CASCADE",
+    });
+
+    // ASheet hasOne MSheet
+    ASheet.hasOne(models.MSheet, {
+      foreignKey: "aSheetId", // matches MSheet.aSheetId
+      sourceKey: "id",
+      as: "MSheet", // alias used in queries
     });
   };
 
