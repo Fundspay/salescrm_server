@@ -64,6 +64,62 @@ const upsertMSheet = async (req, res) => {
 
 module.exports.upsertMSheet = upsertMSheet;
 
+const updateMSheet = async (req, res) => {
+  try {
+    const { id } = req.params; // MSheet ID from URL
+    const {
+      rmAssignedName,
+      rmAssignedContact,
+      domainName,
+      websiteStartDate,
+      websiteCompletionDate,
+      trainingAndHandoverStatus,
+      servicesOpted,
+      clientFeedback,
+      renewalDate,
+      renewalStatus,
+            aSheetId,
+    } = req.body;
+
+    if (!id) {
+      return ReE(res, "MSheet id is required in URL.", 400);
+    }
+
+    // Find existing MSheet by id
+    const existing = await model.MSheet.findByPk(id);
+
+    if (!existing) {
+      return ReE(res, "MSheet record not found.", 404);
+    }
+
+    // Prepare only fields present in request body
+    const updatedData = {};
+    if (rmAssignedName !== undefined) updatedData.rmAssignedName = rmAssignedName;
+    if (rmAssignedContact !== undefined) updatedData.rmAssignedContact = rmAssignedContact;
+    if (domainName !== undefined) updatedData.domainName = domainName;
+    if (websiteStartDate !== undefined) updatedData.websiteStartDate = websiteStartDate || null;
+    if (websiteCompletionDate !== undefined) updatedData.websiteCompletionDate = websiteCompletionDate || null;
+    if (trainingAndHandoverStatus !== undefined) updatedData.trainingAndHandoverStatus = trainingAndHandoverStatus;
+    if (servicesOpted !== undefined) updatedData.servicesOpted = servicesOpted;
+    if (clientFeedback !== undefined) updatedData.clientFeedback = clientFeedback;
+    if (renewalDate !== undefined) updatedData.renewalDate = renewalDate || null;
+    if (renewalStatus !== undefined) updatedData.renewalStatus = renewalStatus;
+    if (aSheetId !== undefined) updatedData.aSheetId = aSheetId;
+
+    // Update record
+    await existing.update(updatedData);
+
+    return ReS(res, { success: true, message: "MSheet record updated successfully.", data: existing }, 200);
+
+  } catch (error) {
+    console.error("updateMSheet Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.updateMSheet = updateMSheet;
+
+
 // ✅ Fetch Single MSheet by ID
 var fetchMSheetById = async (req, res) => {
     try {

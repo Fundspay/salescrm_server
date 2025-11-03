@@ -6,6 +6,8 @@ const MSheetController = require("../controllers/msheet.controller");
 // ✅ Create or update MSheet
 router.post("/upsert", MSheetController.upsertMSheet);
 
+router.put("/update/:id", MSheetController.updateMSheet);
+
 // ✅ Fetch a single MSheet by ID
 router.get("/:id", MSheetController.fetchMSheetById);
 
