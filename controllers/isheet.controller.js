@@ -370,6 +370,7 @@ const getAllDicey = async (req, res) => {
 
 module.exports.getAllDicey = getAllDicey;
 
+
 const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
   try {
     // ----------------------------
@@ -388,41 +389,41 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
       include: [
         {
           model: model.MSheet,
-          required: false, // include even if MSheet is null
+          required: false,
+          as: "MSheet", // alias must match association
         },
       ],
     });
 
-    const subscriptionResults = [];
+    const combinedResults = [];
 
-    if (rows.length > 0) {
-      // Step 2: Map each row to a promise for FundsWeb API call
-      const promises = rows.map(async (row) => {
-        const email = row.email?.trim() || "";
-        const phoneNumber = row.mobileNumber?.trim() || "";
+    // Step 2: Loop through each row and fetch external API data
+    const promises = rows.map(async (row) => {
+      const email = row.email?.trim() || "";
+      const phoneNumber = row.mobileNumber?.trim() || "";
 
-        if (!email && !phoneNumber) {
-          return {
-            rowData: row,
-            message: "Missing both email and phone number, cannot fetch domain",
-          };
-        }
+      let fundsWebData = null;
 
+      if (email || phoneNumber) {
         const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
-
         try {
           const response = await axios.get(apiUrl, { timeout: 5000 });
-          return {
-            rowData: row, // includes ASheet + MSheet data
-            fundsWebData: response.data, // full API response
-          };
+          fundsWebData = response.data; // include full API response
         } catch (err) {
-          return { rowData: row, message: "Failed to fetch external API data" };
+          fundsWebData = { message: "Failed to fetch external API data" };
         }
-      });
+      } else {
+        fundsWebData = { message: "Missing email and phone number" };
+      }
 
-      subscriptionResults.push(...(await Promise.all(promises)));
-    }
+      // Combine ASheet, MSheet, and FundsWeb data into a single object
+      return {
+        ...row.toJSON(), // ASheet + MSheet
+        fundsWebData,    // external API data
+      };
+    });
+
+    combinedResults.push(...(await Promise.all(promises)));
 
     // ----------------------------
     // Step 3: Fetch all registered users
@@ -450,27 +451,25 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
       include: [
         {
           model: model.MSheet,
-          required: false, // include even if null
+          required: false,
+          as: "MSheet",
         },
       ],
       order: [["dateOfConnect", "ASC"]],
     });
 
     // ----------------------------
-    // Step 5: Return combined response
+    // Step 5: Combine all results in one array
     // ----------------------------
-    return ReS(
-      res,
-      {
-        success: true,
-        totalC4Users: subscriptionResults.length,
-        data: subscriptionResults,
-        users,
-        totalC1Scheduled: c1ScheduledRows.length,
-        c1ScheduledData: c1ScheduledRows,
-      },
-      200
-    );
+    const finalArray = [...combinedResults, ...c1ScheduledRows.map((r) => r.toJSON())];
+
+    return ReS(res, {
+      success: true,
+      total: finalArray.length,
+      data: finalArray,
+      users,
+    }, 200);
+
   } catch (error) {
     console.error("fetchSubscriptionC1AndMSheetDetails Error:", error);
     return ReE(res, error.message, 500);
