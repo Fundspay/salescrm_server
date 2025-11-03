@@ -3,6 +3,7 @@ const model = require("../models/index");
 const { ReE, ReS } = require("../utils/util.service.js");
 const { Op, Sequelize } = require("sequelize");
 const axios = require("axios");
+const { database } = require("firebase-admin");
 
 const fetchC1ScheduledDetails = async (req, res) => {
   try {
@@ -455,7 +456,7 @@ const fetchSubscriptionAndC1Details = async (req, res) => {
       {
         success: true,
         totalC4Users: subscriptionResults.length,
-        subscriptionData: subscriptionResults, // full API response included
+        data: subscriptionResults, // full API response included
         users,
         totalC1Scheduled: c1ScheduledRows.length,
         c1ScheduledData: c1ScheduledRows,
