@@ -369,9 +369,11 @@ const getAllDicey = async (req, res) => {
 
 module.exports.getAllDicey = getAllDicey;
 
-var fetchSubscriptionDetails = async function (req, res) {
+const fetchSubscriptionAndC1Details = async (req, res) => {
   try {
+    // ----------------------------
     // Step 1: Fetch all ASheet rows where c4Status has data
+    // ----------------------------
     const rows = await model.ASheet.findAll({
       where: {
         c4Status: {
@@ -382,84 +384,47 @@ var fetchSubscriptionDetails = async function (req, res) {
           ],
         },
       },
-      //  Fetch the entire row instead of selected columns
       attributes: { exclude: [] },
     });
 
-    if (rows.length === 0) {
-      return ReS(
-        res,
-        { success: true, message: "No users found with valid c4Status." },
-        200
-      );
-    }
+    const subscriptionResults = [];
 
-    const results = [];
+    if (rows.length > 0) {
+      // Step 2: Map each row to a promise for FundsWeb API call
+      const promises = rows.map(async (row) => {
+        const email = row.email?.trim() || "";
+        const phoneNumber = row.mobileNumber?.trim() || "";
 
-    // Step 2: For each ASheet record, call FundsWeb API
-    for (const row of rows) {
-      const email = row.email?.trim() || "";
-      const phoneNumber = row.mobileNumber?.trim() || "";
-
-      //  Ensure both are present before calling FundsWeb
-      if (!email && !phoneNumber) {
-        results.push({
-          rowData: row, // include full row
-          message: "Missing both email and phone number, cannot fetch domain",
-        });
-        continue;
-      }
-
-      // Construct URL exactly as required (note the double slash after v1)
-      const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
-
-      try {
-        const response = await axios.get(apiUrl);
-
-        if (response.data && response.data.success) {
-          const fundsData = response.data;
-
-          //  Extract only needed fields
-          const domainInfo =
-            fundsData.Domain && fundsData.User
-              ? {
-                  domainName: fundsData.Domain.name || null,
-                  userName: fundsData.User.name || null,
-                  domainCreatedAt: fundsData.Domain.createdAt || null,
-                  domainUpdatedAt: fundsData.Domain.updatedAt || null,
-                }
-              : null;
-
-          results.push({
-            rowData: row, //  full row instead of email/phone
-            fundsWebData:
-              domainInfo || {
-                message: "No domain or user data found in FundsWeb response",
-              },
-          });
-        } else {
-          results.push({
+        if (!email && !phoneNumber) {
+          return {
             rowData: row,
-            message: "No domain found for this user",
-          });
+            message: "Missing both email and phone number, cannot fetch domain",
+          };
         }
-      } catch (err) {
-        results.push({
-          rowData: row,
-          message: "No domain found for this user",
-        });
-      }
+
+        const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
+
+        try {
+          const response = await axios.get(apiUrl, { timeout: 5000 });
+          // Include full API response without filtering
+          return {
+            rowData: row,
+            fundsWebData: response.data,
+          };
+        } catch (err) {
+          return { rowData: row, message: "Failed to fetch external API data" };
+        }
+      });
+
+      // Wait for all API calls concurrently
+      subscriptionResults.push(...(await Promise.all(promises)));
     }
 
-    //  Step 3: Fetch all registered users and format them
+    // ----------------------------
+    // Step 3: Fetch all registered users
+    // ----------------------------
     const allUsers = await model.User.findAll({
-      attributes: [
-        "id",
-        "firstName",
-        "lastName",
-        "email",
-        "phoneNumber", //  added
-      ],
+      attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
     });
 
     const users = allUsers.map((u) => ({
@@ -467,23 +432,40 @@ var fetchSubscriptionDetails = async function (req, res) {
       firstName: u.firstName,
       lastName: u.lastName,
       email: u.email,
-      mobileNumber: u.phoneNumber, //  added
+      mobileNumber: u.phoneNumber,
       name: `${u.firstName} ${u.lastName}`.trim(),
     }));
 
-    //  Send back all results
+    // ----------------------------
+    // Step 4: Fetch all ASheet rows where meetingStatus contains "C1 Scheduled"
+    // ----------------------------
+    const c1ScheduledRows = await model.ASheet.findAll({
+      where: {
+        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
+      },
+      order: [["dateOfConnect", "ASC"]],
+      raw: true,
+    });
+
+    // ----------------------------
+    // Step 5: Return combined response
+    // ----------------------------
     return ReS(
       res,
-      { success: true, total: results.length, data: results, users },
+      {
+        success: true,
+        totalC4Users: subscriptionResults.length,
+        subscriptionData: subscriptionResults, // full API response included
+        users,
+        totalC1Scheduled: c1ScheduledRows.length,
+        c1ScheduledData: c1ScheduledRows,
+      },
       200
     );
   } catch (error) {
-    console.error("fetchSubscriptionDetails Error:", error);
+    console.error("fetchSubscriptionAndC1Details Error:", error);
     return ReE(res, error.message, 500);
   }
 };
 
-module.exports.fetchSubscriptionDetails = fetchSubscriptionDetails;
-
-
-
+module.exports.fetchSubscriptionAndC1Details = fetchSubscriptionAndC1Details;
