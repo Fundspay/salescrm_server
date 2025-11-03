@@ -370,12 +370,9 @@ const getAllDicey = async (req, res) => {
 
 module.exports.getAllDicey = getAllDicey;
 
-
-const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
+const fetchSubscriptionWithMSheetAndFundsWeb = async (req, res) => {
   try {
-    // ----------------------------
     // Step 1: Fetch all ASheet rows where c4Status has data
-    // ----------------------------
     const rows = await model.ASheet.findAll({
       where: {
         c4Status: {
@@ -390,44 +387,41 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
         {
           model: model.MSheet,
           required: false,
-          as: "MSheet", // alias must match association
+          as: "MSheet", // must match association alias
         },
       ],
     });
 
-    const combinedResults = [];
+    const combinedResults = await Promise.all(
+      rows.map(async (row) => {
+        const rowJSON = row.toJSON();
 
-    // Step 2: Loop through each row and fetch external API data
-    const promises = rows.map(async (row) => {
-      const email = row.email?.trim() || "";
-      const phoneNumber = row.mobileNumber?.trim() || "";
+        // Step 2: Fetch FundsWeb data per row
+        const email = rowJSON.email?.trim() || "";
+        const phoneNumber = rowJSON.mobileNumber?.trim() || "";
+        let fundsWebData = null;
 
-      let fundsWebData = null;
-
-      if (email || phoneNumber) {
-        const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
-        try {
-          const response = await axios.get(apiUrl, { timeout: 5000 });
-          fundsWebData = response.data; // include full API response
-        } catch (err) {
-          fundsWebData = { message: "Failed to fetch external API data" };
+        if (email || phoneNumber) {
+          const apiUrl = `https://api.fundsweb.in/api/v1//userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
+          try {
+            const response = await axios.get(apiUrl, { timeout: 5000 });
+            fundsWebData = response.data; // include full API response
+          } catch (err) {
+            fundsWebData = { message: "Failed to fetch external API data" };
+          }
+        } else {
+          fundsWebData = { message: "Missing email and phone number" };
         }
-      } else {
-        fundsWebData = { message: "Missing email and phone number" };
-      }
 
-      // Combine ASheet, MSheet, and FundsWeb data into a single object
-      return {
-        ...row.toJSON(), // ASheet + MSheet
-        fundsWebData,    // external API data
-      };
-    });
+        // Combine ASheet + MSheet + FundsWeb inside one object
+        return {
+          ...rowJSON,
+          fundsWebData, // separate field inside the same object
+        };
+      })
+    );
 
-    combinedResults.push(...(await Promise.all(promises)));
-
-    // ----------------------------
-    // Step 3: Fetch all registered users
-    // ----------------------------
+    // Step 3: Fetch all users
     const allUsers = await model.User.findAll({
       attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
     });
@@ -441,39 +435,21 @@ const fetchSubscriptionC1AndMSheetDetails = async (req, res) => {
       name: `${u.firstName} ${u.lastName}`.trim(),
     }));
 
-    // ----------------------------
-    // Step 4: Fetch all ASheet rows where meetingStatus contains "C1 Scheduled"
-    // ----------------------------
-    const c1ScheduledRows = await model.ASheet.findAll({
-      where: {
-        meetingStatus: { [Op.iLike]: "%C1 Scheduled%" },
+    // Step 4: Return combined results
+    return ReS(
+      res,
+      {
+        success: true,
+        total: combinedResults.length,
+        data: combinedResults,
+        users,
       },
-      include: [
-        {
-          model: model.MSheet,
-          required: false,
-          as: "MSheet",
-        },
-      ],
-      order: [["dateOfConnect", "ASC"]],
-    });
-
-    // ----------------------------
-    // Step 5: Combine all results in one array
-    // ----------------------------
-    const finalArray = [...combinedResults, ...c1ScheduledRows.map((r) => r.toJSON())];
-
-    return ReS(res, {
-      success: true,
-      total: finalArray.length,
-      data: finalArray,
-      users,
-    }, 200);
-
+      200
+    );
   } catch (error) {
-    console.error("fetchSubscriptionC1AndMSheetDetails Error:", error);
+    console.error("fetchSubscriptionWithMSheetAndFundsWeb Error:", error);
     return ReE(res, error.message, 500);
   }
 };
 
-module.exports.fetchSubscriptionC1AndMSheetDetails = fetchSubscriptionC1AndMSheetDetails;
+module.exports.fetchSubscriptionWithMSheetAndFundsWeb = fetchSubscriptionWithMSheetAndFundsWeb;
