@@ -10,6 +10,6 @@ router.get("/c1-scheduled/:userId", isheetController.getC1ScheduledByUser);
 router.get("/follow-ups", isheetController.getAllFollowUps);
 router.get("/notintrested", isheetController.getAllNotintrested);
 router.get("/dicey", isheetController.getAllDicey);
-router.get("/fetchSubscriptionDetails", isheetController.fetchSubscriptionAndC1Details);
+router.get("/fetchSubscriptionDetails", isheetController.fetchSubscriptionC1AndMSheetDetails);
 
 module.exports = router;
