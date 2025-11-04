@@ -234,8 +234,6 @@ const mgetMSheetsByUserId = async (req, res) => {
 
 module.exports.mgetMSheetsByUserId = mgetMSheetsByUserId;
 
-
-
 const fetchSubscriptionC1AndMSheetDetailsByRM = async (req, res) => {
   try {
     const { name } = req.query;
@@ -253,20 +251,22 @@ const fetchSubscriptionC1AndMSheetDetailsByRM = async (req, res) => {
         {
           model: model.ASheet,
           as: "ASheet",
-          required: false,
+          required: true,
         },
       ],
+      order: [[{ model: model.ASheet, as: "ASheet" }, "dateOfConnect", "ASC"]],
     });
 
-    // Step 2: Fetch external API data for each ASheet using CLIENT (contact person's) email & mobile
+    // Step 2: Map ASheet + MSheet, fetch fundsWebData using client contact info
     const combinedResults = await Promise.all(
       msheets.map(async (m) => {
         const row = m.toJSON();
-        const email = row.ASheet?.email?.trim() || "";
-        const phoneNumber = row.ASheet?.mobileNumber?.trim() || "";
+        const asheet = row.ASheet || {};
+
+        const email = asheet.email?.trim() || "";
+        const phoneNumber = asheet.mobileNumber?.trim() || "";
 
         let fundsWebData = null;
-
         if (email || phoneNumber) {
           const apiUrl = `https://api.fundsweb.in/api/v1/userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
           try {
@@ -279,27 +279,42 @@ const fetchSubscriptionC1AndMSheetDetailsByRM = async (req, res) => {
           fundsWebData = { message: "Missing client email or phone number" };
         }
 
-        // Attach fundsWeb data to response
-        return { ...row, fundsWebData };
+        // Merge ASheet top-level + nested MSheet + fundsWebData
+        return { ...asheet, MSheet: { ...row }, fundsWebData };
       })
     );
 
-    // Step 3: Filter out any invalid C4 status (extra safety)
+    // Step 3: Filter invalid C4 status
     const cleanedArray = combinedResults.filter(
       (item) =>
-        !item.ASheet ||
-        (item.ASheet.c4Status &&
-          item.ASheet.c4Status.trim() !== "" &&
-          item.ASheet.c4Status.trim().toLowerCase() !== "null")
+        !item.c4Status ||
+        (item.c4Status &&
+          item.c4Status.trim() !== "" &&
+          item.c4Status.trim().toLowerCase() !== "null")
     );
 
-    // Step 4: Return clean response (no RM email or phone included)
+    // Step 4: Fetch all users for response
+    const allUsers = await model.User.findAll({
+      attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
+    });
+
+    const users = allUsers.map((u) => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      mobileNumber: u.phoneNumber,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+    }));
+
+    // Step 5: Return response
     return ReS(
       res,
       {
         success: true,
         total: cleanedArray.length,
         data: cleanedArray,
+        users,
       },
       200
     );
