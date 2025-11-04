@@ -236,3 +236,78 @@ module.exports.mgetMSheetsByUserId = mgetMSheetsByUserId;
 
 
 
+const fetchSubscriptionC1AndMSheetDetailsByRM = async (req, res) => {
+  try {
+    const { name } = req.query;
+
+    if (!name || !name.trim()) {
+      return ReE(res, "RM name is required.", 400);
+    }
+
+    // Step 1: Find all MSheet records where RM name matches
+    const msheets = await model.MSheet.findAll({
+      where: {
+        rmAssignedName: { [Op.iLike]: `%${name.trim()}%` },
+      },
+      include: [
+        {
+          model: model.ASheet,
+          as: "ASheet",
+          required: false,
+        },
+      ],
+    });
+
+    // Step 2: Fetch external API data for each ASheet using CLIENT (contact person's) email & mobile
+    const combinedResults = await Promise.all(
+      msheets.map(async (m) => {
+        const row = m.toJSON();
+        const email = row.ASheet?.email?.trim() || "";
+        const phoneNumber = row.ASheet?.mobileNumber?.trim() || "";
+
+        let fundsWebData = null;
+
+        if (email || phoneNumber) {
+          const apiUrl = `https://api.fundsweb.in/api/v1/userdomain/fetch/${email || "null"}/${phoneNumber || "null"}`;
+          try {
+            const response = await axios.get(apiUrl, { timeout: 5000 });
+            fundsWebData = response.data;
+          } catch {
+            fundsWebData = { message: "Failed to fetch external API data" };
+          }
+        } else {
+          fundsWebData = { message: "Missing client email or phone number" };
+        }
+
+        // Attach fundsWeb data to response
+        return { ...row, fundsWebData };
+      })
+    );
+
+    // Step 3: Filter out any invalid C4 status (extra safety)
+    const cleanedArray = combinedResults.filter(
+      (item) =>
+        !item.ASheet ||
+        (item.ASheet.c4Status &&
+          item.ASheet.c4Status.trim() !== "" &&
+          item.ASheet.c4Status.trim().toLowerCase() !== "null")
+    );
+
+    // Step 4: Return clean response (no RM email or phone included)
+    return ReS(
+      res,
+      {
+        success: true,
+        total: cleanedArray.length,
+        data: cleanedArray,
+      },
+      200
+    );
+  } catch (error) {
+    console.error("fetchSubscriptionC1AndMSheetDetailsByRM Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.fetchSubscriptionC1AndMSheetDetailsByRM =
+  fetchSubscriptionC1AndMSheetDetailsByRM;
