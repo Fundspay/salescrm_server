@@ -231,7 +231,7 @@ const mgetMSheetsByUserId = async (req, res) => {
   }
 };
 
-module.exports.getMSheetsByUserId = getMSheetsByUserId;
+module.exports.mgetMSheetsByUserId = mgetMSheetsByUserId;
 
 
 
