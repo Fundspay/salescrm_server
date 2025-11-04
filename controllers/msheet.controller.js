@@ -177,3 +177,61 @@ var fetchAllMSheets = async (req, res) => {
 };
 module.exports.fetchAllMSheets = fetchAllMSheets;
 
+
+const mgetMSheetsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return ReE(res, "userId is required.", 400);
+    }
+
+    // Step 1: Find user by ID
+    const user = await model.User.findByPk(userId, {
+      attributes: ["firstName", "lastName"],
+    });
+
+    if (!user) {
+      return ReE(res, "User not found.", 404);
+    }
+
+    // Step 2: Build the RM name (trim to avoid mismatches)
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+
+    if (!fullName) {
+      return ReE(res, "User has no valid name to match.", 400);
+    }
+
+    // Step 3: Find all MSheet rows where rmAssignedName matches the user's full name
+    const msheets = await model.MSheet.findAll({
+      where: {
+        rmAssignedName: {
+          [Op.iLike]: `%${fullName}%`, // allows partial match (case-insensitive)
+        },
+      },
+      include: [
+        {
+          model: model.ASheet,
+          required: false,
+        },
+      ],
+    });
+
+    // Step 4: Return response
+    return ReS(res, {
+      success: true,
+      total: msheets.length,
+      rmName: fullName,
+      data: msheets,
+    }, 200);
+
+  } catch (error) {
+    console.error("getMSheetsByUserId Error:", error);
+    return ReE(res, error.message, 500);
+  }
+};
+
+module.exports.getMSheetsByUserId = getMSheetsByUserId;
+
+
+
