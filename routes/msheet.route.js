@@ -17,4 +17,6 @@ router.get("/user/:userId", MSheetController.fetchMSheetsByUserId);
 // ✅ Fetch all MSheets
 router.get("/fetchall", MSheetController.fetchAllMSheets);
 
+router.get("/individual/:userId", MSheetController.getMSheetsByUserId);
+
 module.exports = router;
