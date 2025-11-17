@@ -25,7 +25,7 @@ app.use(compression());
 
 // ────── CORS ───────────────────────────────────────────
 const allowedOrigins = [
-  "http://localhost:8080"];  // development frontend
+  "http://localhost:8080","https://www.fundsaudit.com","https://fundsaudit.com","http://www.fundsaudit.com","http://fundsaudit.com"];  // development frontend
 
 
 const corsOptions = {
